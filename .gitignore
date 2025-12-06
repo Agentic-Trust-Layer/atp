@@ -1,0 +1,15 @@
+node_modules
+.turbo
+.pnpm-store
+dist
+build
+.DS_Store
+.next
+.env.local
+.env.development
+.env.test
+.env.production
+*.toml
+*.secret
+
+
