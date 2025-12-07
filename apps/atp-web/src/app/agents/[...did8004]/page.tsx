@@ -19,6 +19,7 @@ import {
   CardContent,
 } from '@mui/material';
 import { AgentFeedbackControls } from '../../../components/AgentFeedbackControls';
+import dynamic from 'next/dynamic';
 
 type DetailsPageParams = {
   params: Promise<{
@@ -289,6 +290,11 @@ export default async function AgentDetailsPage({ params }: DetailsPageParams) {
 
   const displayDid = decodeDid(serializedAgent.did) ?? did8004;
 
+  const AddAgentButton = dynamic(
+    () => import('../../../components/AddAgentToMyListButton').then(mod => mod.AddAgentToMyListButton),
+    { ssr: false }
+  );
+
   return (
     <Container
       maxWidth="lg"
@@ -327,6 +333,15 @@ export default async function AgentDetailsPage({ params }: DetailsPageParams) {
               <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                 <Chip label={validationSummaryText} size="small" color="primary" />
                 <Chip label={reviewsSummaryText} size="small" variant="outlined" />
+              </Box>
+              <Box sx={{ mt: 3 }}>
+                <AddAgentButton
+                  agentId={serializedAgent.agentId}
+                  chainId={serializedAgent.chainId}
+                  agentAccount={serializedAgent.agentAccount}
+                  ownerAddress={serializedAgent.ownerAddress}
+                  agentName={serializedAgent.agentName}
+                />
               </Box>
             </CardContent>
           </Card>

@@ -1240,7 +1240,7 @@ export default function DashboardPage() {
                 </Paper>
               )}
 
-              {agentInfo.metadata && agentInfo.metadata.length > 0 && (
+              {Array.isArray(agentInfo.metadata) && agentInfo.metadata.length > 0 && (
                 <Paper
                   variant="outlined"
                   sx={{
