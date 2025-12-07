@@ -872,7 +872,7 @@ export default function DashboardPage() {
   if (loading || error || !agentInfo) {
     console.log("[DashboardPage] Rendering loading state", { loading, error, hasAgentInfo: !!agentInfo });
     return (
-      <Container maxWidth="md" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ py: 6 }}>
         <Box
           display="flex"
           flexDirection="column"
@@ -895,10 +895,10 @@ export default function DashboardPage() {
               }} 
             />
           </Box>
-          <Typography variant="h6" color="text.primary" fontWeight={500}>
+          <Typography variant="h5" color="text.primary" fontWeight={600}>
             Loading your dashboard...
           </Typography>
-          <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ maxWidth: 400 }}>
+          <Typography variant="body1" color="text.secondary" textAlign="center" sx={{ maxWidth: 400 }}>
             Please wait while we load your agent information
           </Typography>
         </Box>
@@ -914,16 +914,36 @@ export default function DashboardPage() {
       : agentInfo.agentId?.toString() ?? "N/A";
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 6 }}>
       <Box mb={4}>
-        <Typography variant="h4" component="h1" gutterBottom fontWeight={600}>
-          Agent
+        <Typography 
+          variant="h3" 
+          component="h1" 
+          gutterBottom 
+          fontWeight={600}
+          sx={{ mb: 1 }}
+        >
+          Dashboard
         </Typography>
-
+        <Typography variant="body1" color="text.secondary">
+          Manage your ATP Agent information, account details, and agent operations
+        </Typography>
       </Box>
 
+      {error && (
+        <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+          {error}
+        </Alert>
+      )}
+
       {/* Unified Dashboard Tabs */}
-      <Card elevation={2}>
+      <Paper 
+        elevation={2}
+        sx={{
+          borderRadius: 3,
+          overflow: 'hidden',
+        }}
+      >
         <Tabs
           value={dashboardTab}
           onChange={(e, newValue) => setDashboardTab(newValue)}
@@ -932,23 +952,31 @@ export default function DashboardPage() {
           sx={{
             borderBottom: 1,
             borderColor: 'divider',
+            bgcolor: 'background.paper',
+            '& .MuiTab-root': {
+              textTransform: 'none',
+              fontWeight: 600,
+              minHeight: 64,
+              fontSize: '1rem',
+            },
           }}
         >
-          <Tab label="Agent" />
-          <Tab label="Account" />
+          <Tab label="Agent Information" />
+          <Tab label="Account Details" />
         </Tabs>
 
         {/* Agent Tab */}
         {dashboardTab === getTabIndex.agentInfo && (
-          <CardContent>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6" fontWeight={600}>
+          <CardContent sx={{ p: 4 }}>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                <Typography variant="h5" fontWeight={600} color="text.primary">
                   Agent Information
                 </Typography>
                 {agentInfo.did && (
                   <Button
-                    variant="outlined"
-                    size="small"
+                    variant="contained"
+                    size="medium"
+                    startIcon={<EditIcon />}
                     onClick={async () => {
                       if (!agentInfo.did) return;
 
@@ -1015,78 +1043,125 @@ export default function DashboardPage() {
                         setLoadingRegistration(false);
                       }
                     }}
+                    sx={{
+                      borderRadius: 2,
+                      px: 3,
+                      py: 1,
+                      fontWeight: 600,
+                    }}
                   >
-                    Edit
+                    Edit Registration
                   </Button>
                 )}
               </Box>
-              <Divider sx={{ my: 2 }} />
+              <Divider sx={{ my: 3 }} />
 
-              <Box display="flex" alignItems="center" gap={2} mb={3}>
-                {agentInfo.image && (
-                  <Box
-                    component="img"
-                    src={agentInfo.image}
-                    alt={agentInfo.name ?? "Agent"}
-                    sx={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: 2,
-                      objectFit: "cover"
-                    }}
-                  />
-                )}
-                <Box>
-                  <Typography variant="h5" component="h2" fontWeight={600}>
-                    {agentInfo.name ?? "Unnamed Agent"}
-                  </Typography>
-                  <Chip
-                    label={`Agent ID: ${agentIdStr}`}
-                    size="small"
-                    sx={{ mt: 1 }}
-                  />
-                  {agentInfo.did && (
-                    <Box sx={{ mt: 1 }}>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{
-                          fontFamily: "monospace",
-                          fontSize: "0.7rem",
-                          wordBreak: "break-all",
-                          display: "block"
-                        }}
-                      >
-                        DID: {decodeURIComponent(agentInfo.did)}
-                      </Typography>
-                    </Box>
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 3,
+                  mb: 3,
+                  borderRadius: 2,
+                  bgcolor: 'grey.50',
+                  borderColor: 'grey.300',
+                }}
+              >
+                <Box display="flex" alignItems="flex-start" gap={3}>
+                  {agentInfo.image && (
+                    <Box
+                      component="img"
+                      src={agentInfo.image}
+                      alt={agentInfo.name ?? "Agent"}
+                      sx={{
+                        width: 100,
+                        height: 100,
+                        borderRadius: 3,
+                        objectFit: "cover",
+                        border: '2px solid',
+                        borderColor: 'divider',
+                      }}
+                    />
                   )}
-                  {!agentInfo.did && (
-                    <Box sx={{ mt: 1 }}>
-                      <Typography
-                        variant="caption"
-                        color="error"
-                        sx={{ fontSize: "0.7rem" }}
-                      >
-                        DID: Not available
-                      </Typography>
-                    </Box>
-                  )}
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="h4" component="h2" fontWeight={600} gutterBottom>
+                      {agentInfo.name ?? "Unnamed Agent"}
+                    </Typography>
+                    <Chip
+                      label={`Agent ID: ${agentIdStr}`}
+                      size="small"
+                      sx={{ 
+                        mt: 1,
+                        fontWeight: 600,
+                        bgcolor: 'primary.main',
+                        color: 'primary.contrastText',
+                      }}
+                    />
+                    {agentInfo.did && (
+                      <Box sx={{ mt: 2 }}>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{
+                            fontFamily: "monospace",
+                            fontSize: "0.75rem",
+                            wordBreak: "break-all",
+                            display: "block",
+                            bgcolor: 'background.paper',
+                            p: 1,
+                            borderRadius: 1,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                          }}
+                        >
+                          DID: {decodeURIComponent(agentInfo.did)}
+                        </Typography>
+                      </Box>
+                    )}
+                    {!agentInfo.did && (
+                      <Box sx={{ mt: 2 }}>
+                        <Typography
+                          variant="caption"
+                          color="error"
+                          sx={{ fontSize: "0.75rem" }}
+                        >
+                          DID: Not available
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
                 </Box>
-              </Box>
+              </Paper>
 
               {agentInfo.description && (
-                <Box mb={2}>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 3,
+                    mb: 3,
+                    borderRadius: 2,
+                    bgcolor: 'background.paper',
+                    borderColor: 'grey.300',
+                  }}
+                >
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600} sx={{ mb: 1.5 }}>
                     Description
                   </Typography>
-                  <Typography variant="body1">{agentInfo.description}</Typography>
-                </Box>
+                  <Typography variant="body1" sx={{ lineHeight: 1.7 }}>{agentInfo.description}</Typography>
+                </Paper>
               )}
 
               {agentInfo.agentUrl && (
-                <Box mb={2}>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 3,
+                    mb: 3,
+                    borderRadius: 2,
+                    bgcolor: 'background.paper',
+                    borderColor: 'grey.300',
+                  }}
+                >
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600} sx={{ mb: 1.5 }}>
                     Website
                   </Typography>
                   <Typography
@@ -1095,113 +1170,144 @@ export default function DashboardPage() {
                     href={agentInfo.agentUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    sx={{ color: "primary.main", textDecoration: "none" }}
+                    sx={{ 
+                      color: "primary.main", 
+                      textDecoration: "none",
+                      '&:hover': {
+                        textDecoration: 'underline',
+                      },
+                      display: 'block',
+                      fontWeight: 500,
+                    }}
                   >
                     {agentInfo.agentUrl}
                   </Typography>
-                </Box>
+                </Paper>
               )}
 
               {agentInfo.did && agentInfo.chainId && (
-                <Box 
-                  mb={2}
+                <Paper
+                  variant="outlined"
                   sx={{
-                    paddingTop: '0.75rem',
-                    borderTop: '1px solid',
-                    borderColor: 'divider',
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '0.75rem',
-                    alignItems: 'center',
-                    fontSize: '0.8rem',
-                    color: 'text.secondary',
+                    p: 2,
+                    mb: 3,
+                    borderRadius: 2,
+                    bgcolor: 'primary.50',
+                    borderColor: 'primary.200',
                   }}
                 >
-                  <Typography
-                    variant="body2"
-                    component="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setFeedbackModalOpen(true);
-                    }}
+                  <Box
                     sx={{
-                      padding: 0,
-                      border: 'none',
-                      background: 'none',
-                      color: 'primary.main',
-                      fontSize: '0.8rem',
-                      cursor: 'pointer',
-                      textDecoration: 'underline',
-                      '&:hover': {
-                        textDecoration: 'none',
-                      },
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 2,
+                      alignItems: 'center',
                     }}
                   >
-                    reviews{feedbackCount !== null ? ` (${feedbackCount})` : ''}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    component="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setValidationsModalOpen(true);
-                    }}
-                    sx={{
-                      padding: 0,
-                      border: 'none',
-                      background: 'none',
-                      color: 'primary.main',
-                      fontSize: '0.8rem',
-                      cursor: 'pointer',
-                      textDecoration: 'underline',
-                      '&:hover': {
-                        textDecoration: 'none',
-                      },
-                    }}
-                  >
-                    validations{validationsCount !== null ? ` (${validationsCount})` : ''}
-                  </Typography>
-                </Box>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<FeedbackIcon />}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setFeedbackModalOpen(true);
+                      }}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Reviews{feedbackCount !== null ? ` (${feedbackCount})` : ''}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<VerifiedUserIcon />}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setValidationsModalOpen(true);
+                      }}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Validations{validationsCount !== null ? ` (${validationsCount})` : ''}
+                    </Button>
+                  </Box>
+                </Paper>
               )}
 
               {agentInfo.metadata && agentInfo.metadata.length > 0 && (
-                <Box mt={3}>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 3,
+                    mt: 3,
+                    borderRadius: 2,
+                    bgcolor: 'background.paper',
+                    borderColor: 'grey.300',
+                  }}
+                >
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600} sx={{ mb: 2 }}>
                     Additional Metadata
                   </Typography>
                   <Box component="dl" sx={{ m: 0 }}>
                     {agentInfo.metadata.map((item, idx) => (
-                      <Box key={idx} sx={{ mb: 1 }}>
+                      <Box 
+                        key={idx} 
+                        sx={{ 
+                          mb: 2, 
+                          pb: 2, 
+                          borderBottom: idx < agentInfo.metadata.length - 1 ? '1px solid' : 'none', 
+                          borderColor: 'divider' 
+                        }}
+                      >
                         <Typography
                           component="dt"
                           variant="body2"
                           fontWeight={600}
                           color="text.secondary"
+                          sx={{ mb: 0.5 }}
                         >
                           {item.key}
                         </Typography>
-                        <Typography component="dd" variant="body1" sx={{ ml: 2 }}>
+                        <Typography component="dd" variant="body1" sx={{ ml: 2, color: 'text.primary' }}>
                           {item.value}
                         </Typography>
                       </Box>
                     ))}
                   </Box>
-                </Box>
+                </Paper>
               )}
 
               {/* Action Icons - Bottom Right */}
               {agentInfo.did && (
-                <Box 
-                  display="flex" 
-                  justifyContent="flex-end" 
-                  gap={1} 
-                  mt={3}
-                  pt={2}
-                  sx={{ borderTop: '1px solid', borderColor: 'divider' }}
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 2,
+                    mt: 3,
+                    borderRadius: 2,
+                    bgcolor: 'grey.50',
+                    borderColor: 'grey.300',
+                  }}
                 >
-                  <Tooltip title="View NFT TokenURI">
-                    <IconButton
-                      onClick={async () => {
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
+                    Quick Actions
+                  </Typography>
+                  <Box 
+                    display="flex" 
+                    justifyContent="flex-start" 
+                    gap={1.5} 
+                    mt={2}
+                    flexWrap="wrap"
+                  >
+                    <Tooltip title="View NFT TokenURI">
+                      <IconButton
+                        onClick={async () => {
                         if (!agentInfo.did) return;
 
                         setTokenUriModalOpen(true);
@@ -1250,14 +1356,20 @@ export default function DashboardPage() {
                           setLoadingTokenUri(false);
                         }
                       }}
-                    >
-                      <VisibilityIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Session Package">
-                    <IconButton
-                      color="secondary"
-                      onClick={async () => {
+                        sx={{
+                          bgcolor: 'background.paper',
+                          '&:hover': {
+                            bgcolor: 'action.hover',
+                          },
+                        }}
+                      >
+                        <VisibilityIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Session Package">
+                      <IconButton
+                        color="secondary"
+                        onClick={async () => {
                         if (!agentInfo.did) return;
 
                         setSessionPackageModalOpen(true);
@@ -1392,134 +1504,242 @@ export default function DashboardPage() {
                           setLoadingSessionPackage(false);
                         }
                       }}
-                    >
-                      <DescriptionIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Give Feedback">
-                    <IconButton color="primary" onClick={() => openFeedbackDialog()}>
-                      <FeedbackIcon />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
+                        sx={{
+                          bgcolor: 'background.paper',
+                          '&:hover': {
+                            bgcolor: 'action.hover',
+                          },
+                        }}
+                      >
+                        <DescriptionIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Give Feedback">
+                      <IconButton 
+                        color="primary" 
+                        onClick={() => openFeedbackDialog()}
+                        sx={{
+                          bgcolor: 'background.paper',
+                          '&:hover': {
+                            bgcolor: 'action.hover',
+                          },
+                        }}
+                      >
+                        <FeedbackIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </Paper>
               )}
               </CardContent>
             )}
 
             {/* Account Tab */}
             {dashboardTab === getTabIndex.account && (
-              <CardContent>
-                <Typography variant="h6" gutterBottom fontWeight={600}>
+              <CardContent sx={{ p: 4 }}>
+                <Typography variant="h5" gutterBottom fontWeight={600} color="text.primary">
                   Account Information
                 </Typography>
-                <Divider sx={{ my: 2 }} />
+                <Divider sx={{ my: 3 }} />
 
-              {agentInfo.agentAccount && (
-                <Box mb={2}>
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    Your ATP Agent Account Address
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      fontFamily: "monospace",
-                      wordBreak: "break-all",
-                      mt: 0.5
-                    }}
-                  >
-                    {agentInfo.agentAccount}
-                  </Typography>
-                </Box>
-              )}
+                <Grid container spacing={3}>
+                  {agentInfo.agentAccount && (
+                    <Grid item xs={12} md={6}>
+                      <Paper
+                        variant="outlined"
+                        sx={{
+                          p: 2.5,
+                          borderRadius: 2,
+                          bgcolor: 'grey.50',
+                          borderColor: 'grey.300',
+                          height: '100%',
+                        }}
+                      >
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
+                          Your ATP Agent Account Address
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontFamily: "monospace",
+                            wordBreak: "break-all",
+                            mt: 1,
+                            bgcolor: 'background.paper',
+                            p: 1.5,
+                            borderRadius: 1,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                          }}
+                        >
+                          {agentInfo.agentAccount}
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                  )}
 
-              {walletAddress && (
-                <Box mb={2}>
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    Your Account Address
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      fontFamily: "monospace",
-                      wordBreak: "break-all",
-                      mt: 0.5
-                    }}
-                  >
-                    {walletAddress}
-                  </Typography>
-                </Box>
-              )}
+                  {walletAddress && (
+                    <Grid item xs={12} md={6}>
+                      <Paper
+                        variant="outlined"
+                        sx={{
+                          p: 2.5,
+                          borderRadius: 2,
+                          bgcolor: 'grey.50',
+                          borderColor: 'grey.300',
+                          height: '100%',
+                        }}
+                      >
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
+                          Your Account Address
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontFamily: "monospace",
+                            wordBreak: "break-all",
+                            mt: 1,
+                            bgcolor: 'background.paper',
+                            p: 1.5,
+                            borderRadius: 1,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                          }}
+                        >
+                          {walletAddress}
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                  )}
 
-              {agentInfo.chainId && (
-                <Box mb={2}>
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    Chain ID
-                  </Typography>
-                  <Typography variant="body2" sx={{ mt: 0.5 }}>
-                    {agentInfo.chainId} ({sepolia.name})
-                  </Typography>
-                </Box>
-              )}
+                  {agentInfo.chainId && (
+                    <Grid item xs={12} md={6}>
+                      <Paper
+                        variant="outlined"
+                        sx={{
+                          p: 2.5,
+                          borderRadius: 2,
+                          bgcolor: 'background.paper',
+                          height: '100%',
+                        }}
+                      >
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
+                          Chain ID
+                        </Typography>
+                        <Typography variant="body1" sx={{ mt: 1, fontWeight: 500 }}>
+                          {agentInfo.chainId} ({sepolia.name})
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                  )}
 
-              {agentInfo.did && (
-                <Box>
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    ATP Agent DID
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      fontFamily: "monospace",
-                      wordBreak: "break-all",
-                      mt: 0.5
-                    }}
-                  >
-                    {decodeURIComponent(agentInfo.did)}
-                  </Typography>
+                  {agentInfo.did && (
+                    <Grid item xs={12}>
+                      <Paper
+                        variant="outlined"
+                        sx={{
+                          p: 2.5,
+                          borderRadius: 2,
+                          bgcolor: 'background.paper',
+                        }}
+                      >
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
+                          ATP Agent DID
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontFamily: "monospace",
+                            wordBreak: "break-all",
+                            mt: 1,
+                            bgcolor: 'grey.50',
+                            p: 1.5,
+                            borderRadius: 1,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                          }}
+                        >
+                          {decodeURIComponent(agentInfo.did)}
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                  )}
+
                   {/* A2A Endpoint */}
                   {agentInfo.a2aEndpoint && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        A2A Endpoint
-                      </Typography>
-                      <Typography
-                        variant="body2"
+                    <Grid item xs={12} md={6}>
+                      <Paper
+                        variant="outlined"
                         sx={{
-                          fontFamily: "monospace",
-                          wordBreak: "break-all",
-                          mt: 0.5,
-                          fontSize: "0.75rem"
+                          p: 2.5,
+                          borderRadius: 2,
+                          bgcolor: 'primary.50',
+                          borderColor: 'primary.200',
+                          height: '100%',
                         }}
                       >
-                        {agentInfo.a2aEndpoint}
-                      </Typography>
-                    </Box>
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
+                          A2A Endpoint
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontFamily: "monospace",
+                            wordBreak: "break-all",
+                            mt: 1,
+                            fontSize: "0.875rem",
+                            bgcolor: 'background.paper',
+                            p: 1.5,
+                            borderRadius: 1,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                          }}
+                        >
+                          {agentInfo.a2aEndpoint}
+                        </Typography>
+                      </Paper>
+                    </Grid>
                   )}
+
                   {/* MCP Endpoint */}
                   {(agentInfo.mcpEndpoint || (agentInfo.mcp && typeof agentInfo.mcp === 'object' && (agentInfo.mcp as any).endpoint)) && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        MCP Endpoint
-                      </Typography>
-                      <Typography
-                        variant="body2"
+                    <Grid item xs={12} md={6}>
+                      <Paper
+                        variant="outlined"
                         sx={{
-                          fontFamily: "monospace",
-                          wordBreak: "break-all",
-                          mt: 0.5,
-                          fontSize: "0.75rem"
+                          p: 2.5,
+                          borderRadius: 2,
+                          bgcolor: 'secondary.50',
+                          borderColor: 'secondary.200',
+                          height: '100%',
                         }}
                       >
-                        {agentInfo.mcpEndpoint || ((agentInfo.mcp as any)?.endpoint)}
-                      </Typography>
-                    </Box>
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
+                          MCP Endpoint
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontFamily: "monospace",
+                            wordBreak: "break-all",
+                            mt: 1,
+                            fontSize: "0.875rem",
+                            bgcolor: 'background.paper',
+                            p: 1.5,
+                            borderRadius: 1,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                          }}
+                        >
+                          {agentInfo.mcpEndpoint || ((agentInfo.mcp as any)?.endpoint)}
+                        </Typography>
+                      </Paper>
+                    </Grid>
                   )}
-                </Box>
-              )}
+                </Grid>
               </CardContent>
             )}
 
-          </Card>
+          </Paper>
 
       {/* TokenURI Modal */}
       <Dialog 
@@ -1527,8 +1747,15 @@ export default function DashboardPage() {
         onClose={() => setTokenUriModalOpen(false)} 
         maxWidth="md" 
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+          }
+        }}
       >
-        <DialogTitle>Agent NFT TokenURI Information</DialogTitle>
+        <DialogTitle sx={{ pb: 2, fontWeight: 600 }}>
+          Agent NFT TokenURI Information
+        </DialogTitle>
         <DialogContent>
           {loadingTokenUri ? (
             <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" py={4}>
@@ -1544,8 +1771,17 @@ export default function DashboardPage() {
           ) : tokenUriData ? (
             <Box sx={{ pt: 2 }}>
               {tokenUriData.tokenUri && (
-                <>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 2.5,
+                    mb: 3,
+                    borderRadius: 2,
+                    bgcolor: 'grey.50',
+                    borderColor: 'grey.300',
+                  }}
+                >
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
                     Token URI
                   </Typography>
                   <Typography
@@ -1553,46 +1789,68 @@ export default function DashboardPage() {
                     sx={{
                       fontFamily: "monospace",
                       wordBreak: "break-all",
-                      mb: 3,
-                      p: 1,
-                      bgcolor: "grey.100",
-                      borderRadius: 1
+                      mt: 1.5,
+                      p: 1.5,
+                      bgcolor: "background.paper",
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: 'divider',
                     }}
                   >
                     {tokenUriData.tokenUri}
                   </Typography>
-                </>
+                </Paper>
               )}
 
               {tokenUriData.registrationData ? (
-                <>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ mt: 3 }}>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 2.5,
+                    borderRadius: 2,
+                    bgcolor: 'background.paper',
+                    borderColor: 'grey.300',
+                  }}
+                >
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
                     Registration Data (getRegistration Response)
                   </Typography>
                   <Box
                     component="pre"
                     sx={{
+                      mt: 2,
                       p: 2,
                       bgcolor: "grey.50",
-                      borderRadius: 1,
+                      borderRadius: 2,
                       overflow: "auto",
                       maxHeight: "500px",
                       fontFamily: "monospace",
-                      fontSize: "0.875rem"
+                      fontSize: "0.875rem",
+                      border: '1px solid',
+                      borderColor: 'divider',
                     }}
                   >
                     {JSON.stringify(tokenUriData.registrationData, null, 2)}
                   </Box>
-                </>
+                </Paper>
               ) : (
-                <Alert severity="info" sx={{ my: 2 }}>
+                <Alert severity="info" sx={{ my: 2, borderRadius: 2 }}>
                   Registration data could not be fetched. The tokenUri may be invalid or unreachable.
                 </Alert>
               )}
 
               {tokenUriData.agentInfo && (
-                <Box sx={{ mt: 3 }}>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    mt: 3,
+                    p: 2.5,
+                    borderRadius: 2,
+                    bgcolor: 'background.paper',
+                    borderColor: 'grey.300',
+                  }}
+                >
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
                     Agent Information
                   </Typography>
                   <Grid container spacing={2} sx={{ mt: 1 }}>
@@ -1672,13 +1930,18 @@ export default function DashboardPage() {
                       </Grid>
                     )}
                   </Grid>
-                </Box>
+                </Paper>
               )}
             </Box>
           ) : null}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setTokenUriModalOpen(false)}>Close</Button>
+        <DialogActions sx={{ p: 3, pt: 2 }}>
+          <Button 
+            onClick={() => setTokenUriModalOpen(false)}
+            sx={{ borderRadius: 2, px: 3 }}
+          >
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -1688,8 +1951,15 @@ export default function DashboardPage() {
         onClose={() => setUpdateRegistrationModalOpen(false)}
         maxWidth="md"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+          }
+        }}
       >
-        <DialogTitle>Update Agent Registration</DialogTitle>
+        <DialogTitle sx={{ pb: 2, fontWeight: 600 }}>
+          Update Agent Registration
+        </DialogTitle>
         <DialogContent>
           {loadingRegistration ? (
             <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" py={4}>
@@ -1704,7 +1974,7 @@ export default function DashboardPage() {
             </Alert>
           ) : (
             <Box sx={{ pt: 2 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3, lineHeight: 1.7 }}>
                 Update the agent registration information. Changes will be uploaded to IPFS and updated on-chain.
               </Typography>
 
@@ -1716,6 +1986,11 @@ export default function DashboardPage() {
                 margin="normal"
                 placeholder="e.g., gmail-arn.8004-agent.eth"
                 required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                  }
+                }}
               />
 
               <TextField
@@ -1727,6 +2002,11 @@ export default function DashboardPage() {
                 multiline
                 rows={4}
                 placeholder="Enter agent description"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                  }
+                }}
               />
 
               <TextField
@@ -1736,6 +2016,11 @@ export default function DashboardPage() {
                 onChange={(e) => setUpdateFormData({ ...updateFormData, image: e.target.value })}
                 margin="normal"
                 placeholder="https://example.com/image.png"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                  }
+                }}
               />
 
               <TextField
@@ -1745,15 +2030,21 @@ export default function DashboardPage() {
                 onChange={(e) => setUpdateFormData({ ...updateFormData, agentUrl: e.target.value })}
                 margin="normal"
                 placeholder="https://example.com"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                  }
+                }}
               />
 
               <Box sx={{ mt: 3 }}>
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                  <Typography variant="subtitle1" fontWeight={600}>
+                  <Typography variant="subtitle1" fontWeight={600} color="text.primary">
                     Endpoints
                   </Typography>
                   <Button
-                    size="small"
+                    variant="outlined"
+                    size="medium"
                     startIcon={<AddIcon />}
                     onClick={() => {
                       setUpdateFormData({
@@ -1764,20 +2055,48 @@ export default function DashboardPage() {
                         ]
                       });
                     }}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontWeight: 600,
+                    }}
                   >
                     Add Endpoint
                   </Button>
                 </Box>
 
                 {updateFormData.endpoints.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: "center" }}>
-                    No endpoints configured. Click "Add Endpoint" to add one.
-                  </Typography>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 3,
+                      textAlign: "center",
+                      borderRadius: 2,
+                      bgcolor: 'grey.50',
+                      borderColor: 'grey.300',
+                    }}
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      No endpoints configured. Click "Add Endpoint" to add one.
+                    </Typography>
+                  </Paper>
                 ) : (
                   updateFormData.endpoints.map((endpoint, index) => (
-                    <Paper key={index} elevation={1} sx={{ p: 2, mb: 2 }}>
+                    <Paper 
+                      key={index} 
+                      variant="outlined" 
+                      sx={{ 
+                        p: 2.5, 
+                        mb: 2,
+                        borderRadius: 2,
+                        bgcolor: 'background.paper',
+                        borderColor: 'grey.300',
+                      }}
+                    >
                       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                        <Typography variant="subtitle2">Endpoint {index + 1}</Typography>
+                        <Typography variant="subtitle2" fontWeight={600}>
+                          Endpoint {index + 1}
+                        </Typography>
                         <IconButton
                           size="small"
                           color="error"
@@ -1785,6 +2104,11 @@ export default function DashboardPage() {
                             const newEndpoints = [...updateFormData.endpoints];
                             newEndpoints.splice(index, 1);
                             setUpdateFormData({ ...updateFormData, endpoints: newEndpoints });
+                          }}
+                          sx={{
+                            '&:hover': {
+                              bgcolor: 'error.50',
+                            }
                           }}
                         >
                           <DeleteIcon />
@@ -1801,6 +2125,12 @@ export default function DashboardPage() {
                         }}
                         margin="dense"
                         placeholder="e.g., A2A, MCP"
+                        size="small"
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                          }
+                        }}
                       />
                       <TextField
                         fullWidth
@@ -1813,6 +2143,12 @@ export default function DashboardPage() {
                         }}
                         margin="dense"
                         placeholder="e.g., bb/.well-known/agent-card.json or https://example.com/"
+                        size="small"
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                          }
+                        }}
                       />
                       <TextField
                         fullWidth
@@ -1825,6 +2161,12 @@ export default function DashboardPage() {
                         }}
                         margin="dense"
                         placeholder="e.g., 0.3.0, 2025-06-18"
+                        size="small"
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                          }
+                        }}
                       />
                     </Paper>
                   ))
@@ -1832,23 +2174,36 @@ export default function DashboardPage() {
               </Box>
 
               {registrationData && (
-                <Box sx={{ mt: 3, p: 2, bgcolor: "grey.50", borderRadius: 1 }}>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                <Paper
+                  variant="outlined"
+                  sx={{ 
+                    mt: 3, 
+                    p: 2.5, 
+                    bgcolor: "grey.50", 
+                    borderRadius: 2,
+                    borderColor: 'grey.300',
+                  }}
+                >
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
                     Read-Only Information
                   </Typography>
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-                    Agent Account: {registrationData.agentAccount || "N/A"}
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    <strong>Agent Account:</strong> {registrationData.agentAccount || "N/A"}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    Chain ID: {registrationData.chainId || "N/A"}
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                    <strong>Chain ID:</strong> {registrationData.chainId || "N/A"}
                   </Typography>
-                </Box>
+                </Paper>
               )}
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setUpdateRegistrationModalOpen(false)} disabled={updatingRegistration}>
+        <DialogActions sx={{ p: 3, pt: 2 }}>
+          <Button 
+            onClick={() => setUpdateRegistrationModalOpen(false)} 
+            disabled={updatingRegistration}
+            sx={{ borderRadius: 2, px: 3 }}
+          >
             Cancel
           </Button>
           <Button
@@ -1948,6 +2303,7 @@ export default function DashboardPage() {
               }
             }}
             disabled={updatingRegistration || loadingRegistration}
+            sx={{ borderRadius: 2, px: 3, fontWeight: 600 }}
           >
             {updatingRegistration ? "Updating..." : "Update Registration"}
           </Button>
@@ -1960,8 +2316,15 @@ export default function DashboardPage() {
         onClose={() => setSessionPackageModalOpen(false)}
         maxWidth="md"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+          }
+        }}
       >
-        <DialogTitle>Session Package JSON</DialogTitle>
+        <DialogTitle sx={{ pb: 2, fontWeight: 600 }}>
+          Session Package JSON
+        </DialogTitle>
         <DialogContent>
           {loadingSessionPackage ? (
             <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" py={4}>
@@ -1976,25 +2339,36 @@ export default function DashboardPage() {
             </Alert>
           ) : sessionPackageData ? (
             <Box sx={{ pt: 2 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3, lineHeight: 1.7 }}>
                 This session package JSON can be used for delegation and other agent operations.
               </Typography>
-              <Box
-                component="pre"
+              <Paper
+                variant="outlined"
                 sx={{
-                  p: 2,
-                  bgcolor: "grey.50",
-                  borderRadius: 1,
-                  overflow: "auto",
-                  maxHeight: "500px",
-                  fontFamily: "monospace",
-                  fontSize: "0.875rem",
-                  border: "1px solid",
-                  borderColor: "divider"
+                  p: 2.5,
+                  borderRadius: 2,
+                  bgcolor: 'grey.50',
+                  borderColor: 'grey.300',
                 }}
               >
-                {JSON.stringify(sessionPackageData, null, 2)}
-              </Box>
+                <Box
+                  component="pre"
+                  sx={{
+                    p: 2,
+                    bgcolor: "background.paper",
+                    borderRadius: 2,
+                    overflow: "auto",
+                    maxHeight: "500px",
+                    fontFamily: "monospace",
+                    fontSize: "0.875rem",
+                    border: "1px solid",
+                    borderColor: "divider",
+                    m: 0,
+                  }}
+                >
+                  {JSON.stringify(sessionPackageData, null, 2)}
+                </Box>
+              </Paper>
             </Box>
           ) : null}
         </DialogContent>
@@ -2002,6 +2376,7 @@ export default function DashboardPage() {
           {sessionPackageData && (
             <>
               <Button
+                variant="outlined"
                 startIcon={<ContentCopyIcon />}
                 onClick={async () => {
                   try {
@@ -2021,10 +2396,12 @@ export default function DashboardPage() {
                     });
                   }
                 }}
+                sx={{ borderRadius: 2, px: 3, fontWeight: 600 }}
               >
                 Copy
               </Button>
               <Button
+                variant="outlined"
                 startIcon={<FileDownloadIcon />}
                 onClick={() => {
                   try {
@@ -2054,12 +2431,16 @@ export default function DashboardPage() {
                     });
                   }
                 }}
+                sx={{ borderRadius: 2, px: 3, fontWeight: 600 }}
               >
                 Download
               </Button>
             </>
           )}
-          <Button onClick={() => setSessionPackageModalOpen(false)}>
+          <Button 
+            onClick={() => setSessionPackageModalOpen(false)}
+            sx={{ borderRadius: 2, px: 3 }}
+          >
             Close
           </Button>
         </DialogActions>
@@ -2071,8 +2452,13 @@ export default function DashboardPage() {
         onClose={() => setFeedbackModalOpen(false)}
         maxWidth="md"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+          }
+        }}
       >
-        <DialogTitle>
+        <DialogTitle sx={{ pb: 2, fontWeight: 600 }}>
           Feedback — {agentInfo?.name || `Agent #${agentIdStr}`}
         </DialogTitle>
         <DialogContent>
@@ -2081,36 +2467,44 @@ export default function DashboardPage() {
           </Typography>
 
           {feedbackData.summary && (
-            <Box
+            <Paper
+              variant="outlined"
               sx={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '0.75rem',
-                mb: 2,
-                fontSize: '0.85rem',
-                color: 'text.secondary',
+                p: 2.5,
+                mb: 3,
+                borderRadius: 2,
+                bgcolor: 'primary.50',
+                borderColor: 'primary.200',
               }}
             >
-              <Typography variant="body2">
-                <strong>Feedback count:</strong> {feedbackData.summary.count}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Average score:</strong> {feedbackData.summary.averageScore.toFixed(2)}
-              </Typography>
-            </Box>
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 3,
+                }}
+              >
+                <Typography variant="body1" fontWeight={600}>
+                  <strong>Feedback count:</strong> {feedbackData.summary.count}
+                </Typography>
+                <Typography variant="body1" fontWeight={600}>
+                  <strong>Average score:</strong> {feedbackData.summary.averageScore.toFixed(2)}
+                </Typography>
+              </Box>
+            </Paper>
           )}
 
-          <Box
+          <Paper
+            variant="outlined"
             sx={{
               mt: 1,
               border: '1px solid',
               borderColor: 'divider',
-              borderRadius: '10px',
-              p: 1.5,
+              borderRadius: 2,
+              p: 2,
               bgcolor: 'background.paper',
               maxHeight: '500px',
               overflow: 'auto',
-              fontSize: '0.85rem',
             }}
           >
             {feedbackData.loading ? (
@@ -2137,11 +2531,12 @@ export default function DashboardPage() {
                       key={item.index ?? index}
                       component="li"
                       sx={{
-                        p: 1.5,
-                        borderRadius: '8px',
+                        p: 2,
+                        borderRadius: 2,
                         border: '1px solid',
                         borderColor: 'divider',
                         bgcolor: 'background.default',
+                        mb: 1.5,
                       }}
                     >
                       <Box
@@ -2205,10 +2600,15 @@ export default function DashboardPage() {
                 })}
               </Box>
             )}
-          </Box>
+          </Paper>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setFeedbackModalOpen(false)}>Close</Button>
+        <DialogActions sx={{ p: 3, pt: 2 }}>
+          <Button 
+            onClick={() => setFeedbackModalOpen(false)}
+            sx={{ borderRadius: 2, px: 3 }}
+          >
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -2218,52 +2618,73 @@ export default function DashboardPage() {
         onClose={() => setValidationsModalOpen(false)}
         maxWidth="md"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+          }
+        }}
       >
-        <DialogTitle>
+        <DialogTitle sx={{ pb: 2, fontWeight: 600 }}>
           Validations — {agentInfo?.name || `Agent #${agentIdStr}`}
         </DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3, lineHeight: 1.7 }}>
             Pending and completed validations for this agent from the on-chain validation registry.
           </Typography>
 
           {validationsData.loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-              <CircularProgress size={24} />
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress size={32} />
             </Box>
           ) : validationsData.error ? (
-            <Typography color="error">{validationsData.error}</Typography>
+            <Alert severity="error" sx={{ borderRadius: 2 }}>
+              {validationsData.error}
+            </Alert>
           ) : (
             <Box
               sx={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 2,
+                gap: 3,
                 maxHeight: '420px',
                 overflow: 'auto',
-                fontSize: '0.85rem',
               }}
             >
-              <Box>
-                <Typography variant="h6" sx={{ fontSize: '0.9rem', mb: 1 }}>
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2.5,
+                  borderRadius: 2,
+                  bgcolor: 'success.50',
+                  borderColor: 'success.200',
+                }}
+              >
+                <Typography variant="h6" sx={{ fontSize: '1rem', mb: 2, fontWeight: 600 }}>
                   Completed validations ({validationsData.completed?.length || 0})
                 </Typography>
                 {validationsData.completed && validationsData.completed.length > 0 ? (
-                  <Box component="ul" sx={{ listStyle: 'disc', pl: 2.5, m: 0 }}>
+                  <Box component="ul" sx={{ listStyle: 'none', pl: 0, m: 0, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                     {validationsData.completed.map((item: any, index: number) => (
-                      <Box key={index} component="li" sx={{ mb: 0.5 }}>
-                        <Typography
-                          component="code"
+                      <Box key={index} component="li">
+                        <Paper
+                          variant="outlined"
                           sx={{
-                            fontFamily: 'monospace',
-                            fontSize: '0.8rem',
-                            bgcolor: 'background.default',
-                            p: 0.5,
+                            p: 1.5,
                             borderRadius: 1,
+                            bgcolor: 'background.paper',
                           }}
                         >
-                          {JSON.stringify(item)}
-                        </Typography>
+                          <Typography
+                            component="code"
+                            sx={{
+                              fontFamily: 'monospace',
+                              fontSize: '0.875rem',
+                              wordBreak: 'break-all',
+                            }}
+                          >
+                            {JSON.stringify(item, null, 2)}
+                          </Typography>
+                        </Paper>
                       </Box>
                     ))}
                   </Box>
@@ -2272,28 +2693,43 @@ export default function DashboardPage() {
                     No completed validations.
                   </Typography>
                 )}
-              </Box>
+              </Paper>
 
-              <Box>
-                <Typography variant="h6" sx={{ fontSize: '0.9rem', mb: 1 }}>
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2.5,
+                  borderRadius: 2,
+                  bgcolor: 'warning.50',
+                  borderColor: 'warning.200',
+                }}
+              >
+                <Typography variant="h6" sx={{ fontSize: '1rem', mb: 2, fontWeight: 600 }}>
                   Pending validations ({validationsData.pending?.length || 0})
                 </Typography>
                 {validationsData.pending && validationsData.pending.length > 0 ? (
-                  <Box component="ul" sx={{ listStyle: 'disc', pl: 2.5, m: 0 }}>
+                  <Box component="ul" sx={{ listStyle: 'none', pl: 0, m: 0, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                     {validationsData.pending.map((item: any, index: number) => (
-                      <Box key={index} component="li" sx={{ mb: 0.5 }}>
-                        <Typography
-                          component="code"
+                      <Box key={index} component="li">
+                        <Paper
+                          variant="outlined"
                           sx={{
-                            fontFamily: 'monospace',
-                            fontSize: '0.8rem',
-                            bgcolor: 'background.default',
-                            p: 0.5,
+                            p: 1.5,
                             borderRadius: 1,
+                            bgcolor: 'background.paper',
                           }}
                         >
-                          {JSON.stringify(item)}
-                        </Typography>
+                          <Typography
+                            component="code"
+                            sx={{
+                              fontFamily: 'monospace',
+                              fontSize: '0.875rem',
+                              wordBreak: 'break-all',
+                            }}
+                          >
+                            {JSON.stringify(item, null, 2)}
+                          </Typography>
+                        </Paper>
                       </Box>
                     ))}
                   </Box>
@@ -2302,12 +2738,17 @@ export default function DashboardPage() {
                     No pending validations.
                   </Typography>
                 )}
-              </Box>
+              </Paper>
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setValidationsModalOpen(false)}>Close</Button>
+        <DialogActions sx={{ p: 3, pt: 2 }}>
+          <Button 
+            onClick={() => setValidationsModalOpen(false)}
+            sx={{ borderRadius: 2, px: 3 }}
+          >
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
 
