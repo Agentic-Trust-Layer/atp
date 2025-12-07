@@ -4,6 +4,7 @@
   "private": true,
   "description": "ATP Agent - A2A provider server for smart agent communication endpoints",
   "scripts": {
+    "prebuild": "cd ../.. && pnpm --filter @my-scope/core build",
     "dev": "wrangler dev src/server.ts",
     "dev:node": "tsx src/server.ts",
     "deploy": "wrangler deploy",

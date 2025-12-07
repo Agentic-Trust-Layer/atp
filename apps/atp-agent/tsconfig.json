@@ -13,7 +13,8 @@
     "isolatedModules": true,
     "incremental": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@my-scope/core": ["../../packages/core/src"]
     }
   },
   "include": ["**/*.ts"],

@@ -1,5 +1,7 @@
 {
-  "buildCommand": "pnpm build",
-  "installCommand": "cd ../.. && pnpm install"
+  "buildCommand": "pnpm --filter @my-scope/core build && cd apps/atp-web && pnpm build",
+  "installCommand": "pnpm install",
+  "outputDirectory": "apps/atp-web/.next",
+  "framework": "nextjs"
 }
 

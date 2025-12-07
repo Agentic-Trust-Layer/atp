@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["esnext"],
+    "module": "esnext",
+    "moduleResolution": "node",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "paths": {
+      "@my-scope/core": ["./packages/core/src"]
+    }
+  },
+  "include": [
+    "apps/atp-web/**/*",
+    "packages/core/src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "apps/atp-agent",
+    "dist",
+    ".next"
+  ]
+}
+

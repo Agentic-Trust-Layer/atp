@@ -176,7 +176,7 @@ function addHttpSignatureHeaders(c: any, targetUri: string) {
 
     // Ensure we have a Date header that matches what we sign
     const dateHeader = new Date().toUTCString();
-    c.header('Date', dateHeader);
+    c.header('Date' as any, dateHeader);
 
     // Signature parameters: label "sig", kid "g1", alg "ed25519"
     const signatureParams =
@@ -196,8 +196,8 @@ function addHttpSignatureHeaders(c: any, targetUri: string) {
     const sigB64 = sigBytes.toString('base64');
 
     // RFC 9421 headers
-    c.header('Signature-Input', `sig=${signatureParams}`);
-    c.header('Signature', `sig=:${sigB64}:`);
+    c.header('Signature-Input' as any, `sig=${signatureParams}`);
+    c.header('Signature' as any, `sig=:${sigB64}:`);
 
     console.log(
       '[ARN-AGENT] Added HTTP Message Signature headers for A2A GET handshake',
@@ -625,7 +625,11 @@ app.get('/.well-known/agent-card.json', async (c) => {
     }
 
     const headers = getCorsHeaders();
-    Object.entries(headers).forEach(([key, value]) => c.header(key, value));
+    Object.entries(headers).forEach(([key, value]) => {
+      if (typeof value === 'string') {
+        c.header(key as any, value);
+      }
+    });
 
     // Serialize BigInt values in agentCard before returning
     const serializedAgentCard = serializeBigInt(agentCard);
@@ -674,7 +678,11 @@ async function handleA2aGet(c: any) {
   };
 
   const headers = getCorsHeaders();
-  Object.entries(headers).forEach(([key, value]) => c.header(key, value));
+  Object.entries(headers).forEach(([key, value]) => {
+    if (typeof value === 'string') {
+      c.header(key as any, value);
+    }
+  });
 
   // Attach HTTP Message Signature headers if key is configured
   addHttpSignatureHeaders(c, targetUri);
@@ -2143,12 +2151,20 @@ async function handleA2aRequest(c: any) {
     };
 
     const headers = getCorsHeaders();
-    Object.entries(headers).forEach(([key, value]) => c.header(key, value));
+    Object.entries(headers).forEach(([key, value]) => {
+      if (typeof value === 'string') {
+        c.header(key as any, value);
+      }
+    });
     return c.json(a2aResponse);
   } catch (error) {
     console.error('[ARN-AGENT] Error processing A2A request:', error);
     const headers = getCorsHeaders();
-    Object.entries(headers).forEach(([key, value]) => c.header(key, value));
+    Object.entries(headers).forEach(([key, value]) => {
+      if (typeof value === 'string') {
+        c.header(key as any, value);
+      }
+    });
     return c.json(
       {
         success: false,

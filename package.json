@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "description": "atp-web monorepo managed with pnpm workspaces.",
   "scripts": {
-    "build": "pnpm -r build",
+    "build": "pnpm --filter @my-scope/core build && pnpm --filter @my-scope/atp-web build",
+    "build:core": "pnpm --filter @my-scope/core build",
+    "build:web": "pnpm --filter @my-scope/atp-web build",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
     "format": "pnpm -r format"
