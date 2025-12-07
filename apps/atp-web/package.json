@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:cloudflare": "pnpm build && wrangler pages dev .next",
-    "prebuild": "cd ../.. && pnpm --filter @my-scope/core build",
+    "prebuild": "cd ../.. && cd packages/core && pnpm build && cd ../..",
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext ts,tsx,js,jsx"
