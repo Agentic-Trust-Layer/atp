@@ -226,7 +226,7 @@ export function SiteHeader() {
                   display: "block" 
                 })}
               >
-                A Place to manage your Smart Agents
+                Build the Agentic Web - Create, Validate, Discover Agents
               </Typography>
             </Box>
           </Box>

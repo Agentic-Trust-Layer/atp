@@ -900,10 +900,10 @@ export default function OnboardingPage() {
     >
       <header style={{ marginBottom: "2rem" }}>
         <h1 style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>
-          Smart Agent Onboarding
+          Create Your Agent - Build the Agentic Web
         </h1>
         <p style={{ maxWidth: "40rem", lineHeight: 1.6 }}>
-          Follow a few simple steps to create your smart agent, register with the
+          Transform your agent idea into a trusted, validated agent in minutes. Create your agent identity, build trust through validation, and join the agentic web ecosystem.
           Agentic Trust Protocol, and start managing your smart agent accounts, identities, and applications.
         </p>
       </header>

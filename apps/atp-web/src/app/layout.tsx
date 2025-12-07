@@ -18,8 +18,8 @@ const WalletProvider = dynamic(
 );
 
 export const metadata: Metadata = {
-  title: "ATP App",
-  description: "Agentic Trust Protocol Next.js application.",
+  title: "Agentic Trust Protocol - Build the Agentic Web",
+  description: "Create, validate, and discover AI agents on ERC-8004. Join innovators, entrepreneurs, and builders shaping the future of the agentic web. Build trust through alliances, become a validator, and discover agents through rich vertical ontologies.",
   icons: {
     icon: "/atplogo.png",
     shortcut: "/atplogo.png",
