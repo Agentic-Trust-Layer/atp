@@ -1240,7 +1240,10 @@ export default function DashboardPage() {
                 </Paper>
               )}
 
-              {Array.isArray(agentInfo.metadata) && agentInfo.metadata.length > 0 && (
+              {(() => {
+                const metadata = Array.isArray(agentInfo.metadata) ? agentInfo.metadata : [];
+                if (metadata.length === 0) return null;
+                return (
                 <Paper
                   variant="outlined"
                   sx={{
@@ -1255,13 +1258,13 @@ export default function DashboardPage() {
                     Additional Metadata
                   </Typography>
                   <Box component="dl" sx={{ m: 0 }}>
-                    {agentInfo.metadata.map((item, idx) => (
+                    {metadata.map((item, idx) => (
                       <Box 
                         key={idx} 
                         sx={{ 
                           mb: 2, 
                           pb: 2, 
-                          borderBottom: idx < agentInfo.metadata.length - 1 ? '1px solid' : 'none', 
+                          borderBottom: idx < metadata.length - 1 ? '1px solid' : 'none', 
                           borderColor: 'divider' 
                         }}
                       >
@@ -1281,7 +1284,8 @@ export default function DashboardPage() {
                     ))}
                   </Box>
                 </Paper>
-              )}
+                );
+              })()}
 
               {/* Action Icons - Bottom Right */}
               {agentInfo.did && (
