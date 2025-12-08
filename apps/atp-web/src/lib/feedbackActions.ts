@@ -1,4 +1,5 @@
 import type { SafeEventEmitterProvider } from '@web3auth/base';
+import { mainnet, sepolia, baseSepolia, optimismSepolia } from 'viem/chains';
 
 export interface NormalizeA2aOptions {
   endpoint?: string | null;
@@ -116,12 +117,20 @@ export async function resolveClientAddress({
     }
   }
 
-  const resp = await fetch('/api/client-address');
-  if (resp.ok) {
-    const data = await resp.json();
-    if (data?.clientAddress) {
-      return data.clientAddress;
+  try {
+    const resp = await fetch('/api/client-address');
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data?.clientAddress) {
+        return data.clientAddress;
+      }
+    } else {
+      // Log but do not throw to allow wallet-based fallback
+      const data = await resp.json().catch(() => ({}));
+      console.warn('[feedbackActions] /api/client-address returned non-200', data);
     }
+  } catch (err) {
+    console.warn('[feedbackActions] /api/client-address failed:', err);
   }
 
   throw new Error('Client address not available. Please connect your wallet.');
@@ -151,6 +160,13 @@ export interface SubmitFeedbackResult {
   txHash?: string;
   feedbackAuthUsed?: any;
   feedbackRequestId?: number | string | null;
+}
+
+function resolveChain(chainId: number) {
+  if (chainId === 1) return mainnet;
+  if (chainId === 84532) return baseSepolia;
+  if (chainId === 11155420) return optimismSepolia;
+  return sepolia;
 }
 
 export async function submitFeedbackAction({
@@ -243,33 +259,39 @@ export async function submitFeedbackAction({
 
   const score = rating * 20;
 
-  const feedbackResponse = await fetch('/api/feedback', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      agentId: resolvedAgentId,
-      chainId: resolvedChainId,
-      score,
-      feedback: comment,
-      feedbackAuth: feedbackAuthToUse,
-      clientAddress,
-      ...(agentName && { agentName }),
-      ...(tag1 && { tag1 }),
-      ...(tag2 && { tag2 }),
-      ...(skillId && { skill: skillId }),
-      ...(context && { context }),
-      ...(capability && { capability }),
-    }),
-  });
-
-  if (!feedbackResponse.ok) {
-    const errorData = await feedbackResponse.json().catch(() => ({}));
-    throw new Error(errorData.message || errorData.error || 'Failed to submit feedback.');
+  // Client-side submission using connected wallet via giveFeedbackWithWallet
+  if (!web3Provider || !walletAddress) {
+    throw new Error('Wallet not connected. Please connect your wallet to give feedback.');
   }
 
-  const feedbackResult = await feedbackResponse.json();
+  const did8004 = `did:8004:${resolvedChainId}:${resolvedAgentId}`;
+  const chain = resolveChain(resolvedChainId);
+
+  // Dynamically import to avoid bundler resolution issues if not present
+  const { giveFeedbackWithWallet } = (await import('@agentic-trust/core/client').catch(() => ({}))) as {
+    giveFeedbackWithWallet?: (opts: any) => Promise<{ txHash?: string }>;
+  };
+
+  if (!giveFeedbackWithWallet) {
+    throw new Error('Feedback client not available. Missing giveFeedbackWithWallet export.');
+  }
+
+  const feedbackResult = await giveFeedbackWithWallet({
+    did8004,
+    chain,
+    score,
+    feedback: comment,
+    feedbackAuth: feedbackAuthToUse,
+    clientAddress: walletAddress as `0x${string}`,
+    ethereumProvider: web3Provider,
+    ...(agentName && { agentName }),
+    ...(tag1 && { tag1 }),
+    ...(tag2 && { tag2 }),
+    ...(skillId && { skill: skillId }),
+    ...(context && { context }),
+    ...(capability && { capability }),
+  });
+
   const feedbackTxHash = feedbackResult?.txHash as string | undefined;
 
   if (feedbackTxHash && preExistingFeedbackRequestId) {

@@ -259,19 +259,7 @@ export async function GET(request: NextRequest) {
     console.log('[feedback-auth] Response status:', feedbackAuthResponse.status);
     console.log('[feedback-auth] Response ok:', feedbackAuthResponse.ok);
 
-    if (!feedbackAuthResponse.ok) {
-      const errorData = await feedbackAuthResponse.json().catch(() => ({}));
-      console.error('[feedback-auth] A2A agent returned error:', errorData);
-      return NextResponse.json(
-        {
-          error: 'Failed to get feedback auth from A2A agent',
-          message: errorData.message || errorData.error || 'Unknown error',
-        },
-        { status: feedbackAuthResponse.status }
-      );
-    }
-
-    const feedbackAuthData = await feedbackAuthResponse.json();
+    const feedbackAuthData = await feedbackAuthResponse.json().catch(() => ({} as any));
     console.log('[feedback-auth] Full response from A2A agent:', JSON.stringify(feedbackAuthData, null, 2));
     console.log('[feedback-auth] Response structure:', {
       success: feedbackAuthData.success,
@@ -282,15 +270,16 @@ export async function GET(request: NextRequest) {
       error: feedbackAuthData.response?.error,
     });
 
-    // Check if there's an error in the response
-    if (feedbackAuthData.response?.error) {
-      console.error('[feedback-auth] A2A agent returned error in response:', feedbackAuthData.response.error);
+    // If provider returned an error, surface it but do not 4xx so UI can display it
+    if (feedbackAuthData.response?.error || feedbackAuthData.error || feedbackAuthData.message) {
+      console.warn('[feedback-auth] A2A agent returned error in response:', feedbackAuthData.response?.error || feedbackAuthData.error || feedbackAuthData.message);
       return NextResponse.json(
         {
           error: 'A2A agent error',
-          message: feedbackAuthData.response.error,
+          message: feedbackAuthData.response?.error || feedbackAuthData.error || feedbackAuthData.message || 'Unknown error',
+          details: feedbackAuthData,
         },
-        { status: 400 }
+        { status: 200 }
       );
     }
 

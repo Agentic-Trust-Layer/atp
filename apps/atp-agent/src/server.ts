@@ -389,6 +389,13 @@ app.get('/api/agent/account', async (c) => {
  */
 app.get('/.well-known/agent-card.json', async (c) => {
   try {
+    const requestUrl = c.req.url;
+    console.log('[Agent Card] Request received for /.well-known/agent-card.json', {
+      url: requestUrl,
+      timestamp: new Date().toISOString(),
+      headers: c.req.header(),
+    });
+
     const { agentName, ensName } = c.get('domainInfo');
 
     // Resolve agent from ENS using Agentic Trust client
@@ -579,6 +586,8 @@ app.get('/.well-known/agent-card.json', async (c) => {
       });
     }
 
+    const agentCardVersion = process.env.AGENT_CARD_VERSION || '1.0.0';
+
     let agentCard: any;
     if (sessionPackageFromDb) {
       agentCard = generateAgentCardFromSessionPackage(sessionPackageFromDb as SessionPackage, {
@@ -598,6 +607,7 @@ app.get('/.well-known/agent-card.json', async (c) => {
 
     // Ensure a2aEndpoint is set correctly (/api/a2a, original behavior)
     (agentCard as any).a2aEndpoint = `${baseUrl}/api/a2a`;
+    (agentCard as any).version = agentCardVersion;
 
     // Enrich metadata
     if (agentData) {
@@ -621,6 +631,7 @@ app.get('/.well-known/agent-card.json', async (c) => {
         chainId: chainId ? Number(chainId) : undefined,
         agentAccount,
         did: agentDid,
+        version: agentCardVersion,
       } as any;
     }
 
@@ -696,8 +707,16 @@ async function handleA2aGet(c: any) {
 async function handleA2aRequest(c: any) {
   console.log('\n\n\n');
   console.log('========================================');
+  console.log('[ATP-AGENT] A2A REQUEST RECEIVED');
+  console.log('[ATP-AGENT] Timestamp:', new Date().toISOString());
+  console.log('[ATP-AGENT] Path:', c.req.path);
+  console.log('[ATP-AGENT] Headers:', JSON.stringify(c.req.header(), null, 2));
+
+  console.log('\n\n\n');
+  console.log('========================================');
   console.log('[ARN-AGENT] POST A2A RECEIVED');
   console.log('[ARN-AGENT] Timestamp:', new Date().toISOString());
+  console.log('[ARN-AGENT] Path:', c.req.path);
   console.log('[ARN-AGENT] Headers:', JSON.stringify(c.req.header(), null, 2));
   
   let body: any;
@@ -806,6 +825,14 @@ async function handleA2aRequest(c: any) {
 
     // Check if this is a feedbackAuth request
     if (skillId === 'agent.feedback.requestAuth') {
+      console.log('[ATP-AGENT][feedbackAuth] request received', {
+        fromAgentId,
+        toAgentId,
+        skillId,
+        payload,
+        metadata,
+        timestamp: new Date().toISOString(),
+      });
       console.log('[ARN-AGENT] ========================================');
       console.log('[ARN-AGENT] DETECTED: Feedback Auth Request');
       console.log('[ARN-AGENT] ========================================');

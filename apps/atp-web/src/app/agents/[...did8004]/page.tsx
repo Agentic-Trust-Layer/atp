@@ -341,6 +341,7 @@ export default async function AgentDetailsPage({ params }: DetailsPageParams) {
                   agentAccount={serializedAgent.agentAccount}
                   ownerAddress={serializedAgent.ownerAddress}
                   agentName={serializedAgent.agentName}
+                  did8004={displayDid}
                 />
               </Box>
             </CardContent>
@@ -360,15 +361,29 @@ export default async function AgentDetailsPage({ params }: DetailsPageParams) {
             <Typography variant="body2" color="text.secondary">
               Agent ID: {serializedAgent.agentId}
             </Typography>
-            {serializedAgent.agentAccount && (
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mt: 1, fontFamily: 'monospace', wordBreak: 'break-all' }}
-              >
-                Agent account: {serializedAgent.agentAccount}
-              </Typography>
-            )}
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mt: 1, fontFamily: 'monospace', wordBreak: 'break-all' }}
+            >
+              Agent account: {serializedAgent.agentAccount || '(not provided)'}
+            </Typography>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mt: 1, fontFamily: 'monospace', wordBreak: 'break-all' }}
+            >
+              A2A endpoint: {serializedAgent.a2aEndpoint || '(not configured)'}
+            </Typography>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mt: 1, fontFamily: 'monospace', wordBreak: 'break-all' }}
+            >
+              MCP endpoint:{' '}
+              {(serializedAgent.mcp && typeof serializedAgent.mcp === 'object' && (serializedAgent.mcp as any).endpoint) ||
+                '(not configured)'}
+            </Typography>
           </Box>
 
           <Divider sx={{ my: 2 }} />

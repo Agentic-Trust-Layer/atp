@@ -13,6 +13,7 @@ type Props = {
   agentAccount: string | null;
   ownerAddress: string | null;
   agentName: string | null;
+  did8004: string;
 };
 
 export function AddAgentToMyListButton({
@@ -21,6 +22,7 @@ export function AddAgentToMyListButton({
   agentAccount,
   ownerAddress,
   agentName,
+  did8004,
 }: Props) {
   const { user } = useConnection();
   const { address: walletAddress, isConnected } = useWallet();
@@ -30,20 +32,64 @@ export function AddAgentToMyListButton({
     message: "",
     severity: "success",
   });
+  const [isOwner, setIsOwner] = useState<boolean | null>(null);
+  const [checkingOwner, setCheckingOwner] = useState(false);
 
   const normalizedWallet = useMemo(() => walletAddress?.toLowerCase() ?? null, [walletAddress]);
-  const normalizedOwner = useMemo(
-    () => ownerAddress?.toLowerCase() ?? agentAccount?.toLowerCase() ?? null,
-    [ownerAddress, agentAccount]
-  );
+  const normalizedOwner = useMemo(() => {
+    const owner = ownerAddress?.toLowerCase();
+    const acct = agentAccount?.toLowerCase();
+    return owner ?? acct ?? null;
+  }, [ownerAddress, agentAccount]);
 
+  // Allow if:
+  // - user + wallet connected
+  // - owner check is not explicitly false (null/unknown or true are allowed)
+  // - if we have an owner hint, it must match the wallet
   const canAdd = Boolean(
     user?.email &&
     isConnected &&
     normalizedWallet &&
-    normalizedOwner &&
-    normalizedWallet === normalizedOwner
+    (isOwner !== false) &&
+    (!normalizedOwner || normalizedWallet === normalizedOwner)
   );
+
+  // Server-side ownership check (best-effort)
+  React.useEffect(() => {
+    let cancelled = false;
+    async function checkOwner() {
+      if (!isConnected || !walletAddress || !did8004) {
+        setIsOwner(null);
+        return;
+      }
+      setCheckingOwner(true);
+      try {
+        const resp = await fetch(`/api/agents/${encodeURIComponent(did8004)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ walletAddress, action: 'isOwner' }),
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (!cancelled && typeof data.isOwner === 'boolean') {
+            setIsOwner(data.isOwner);
+          }
+        } else {
+          console.warn('[AddAgentToMyListButton] isOwner check failed:', await resp.text());
+          if (!cancelled) setIsOwner(null);
+        }
+      } catch (err) {
+        console.warn('[AddAgentToMyListButton] isOwner check error:', err);
+        if (!cancelled) setIsOwner(null);
+      } finally {
+        if (!cancelled) setCheckingOwner(false);
+      }
+    }
+    checkOwner();
+    return () => {
+      cancelled = true;
+    };
+  }, [isConnected, walletAddress, did8004]);
 
   const handleAdd = useCallback(async () => {
     if (!user?.email || !normalizedWallet) {
@@ -53,18 +99,22 @@ export function AddAgentToMyListButton({
 
     setLoading(true);
     try {
-      // Ensure the user profile is up to date with wallet addresses
+      // Ensure the user profile is up to date with wallet addresses (best-effort)
       await saveUserProfile({
         email: user.email,
         eoa_address: walletAddress,
+      }).catch(() => {
+        /* non-blocking */
       });
 
       const emailDomain = user.email.includes("@") ? user.email.split("@")[1] : "";
+      const safeAgentName = agentName || "";
+      const safeAccount = agentAccount || ownerAddress || normalizedWallet || "";
       await associateUserWithAgent(user.email, {
-        ens_name: agentName || "",
-        agent_name: agentName || "",
+        ens_name: safeAgentName,
+        agent_name: safeAgentName,
         email_domain: emailDomain,
-        agent_account: agentAccount || ownerAddress || "",
+        agent_account: safeAccount,
         chain_id: chainId,
         is_primary: true,
         role: "owner",
@@ -78,9 +128,9 @@ export function AddAgentToMyListButton({
             did,
             agentId,
             chainId,
-            agentName: agentName || "",
-            agentAccount: agentAccount || ownerAddress || "",
-            ensName: agentName || "",
+          agentName: safeAgentName,
+          agentAccount: safeAccount,
+          ensName: safeAgentName,
             a2aEndpoint: null,
             image: null,
           },
@@ -115,6 +165,8 @@ export function AddAgentToMyListButton({
             ? "Connect your wallet to add this agent."
             : normalizedOwner && normalizedWallet !== normalizedOwner
               ? "You must be the agent owner to add it."
+              : isOwner === false
+                ? "Ownership check failed: you are not the owner."
               : !user?.email
                 ? "Sign in to add this agent."
                 : ""

@@ -123,7 +123,7 @@ export function generateAgentCardFromSessionPackage(
       organization: options?.providerOrganization || process.env.PROVIDER_ORGANIZATION || 'A2A Provider',
       url: providerUrl,
     },
-    version: options?.agentVersion || process.env.AGENT_VERSION || '0.0.2',
+    version: options?.agentVersion || process.env.AGENT_VERSION || '0.0.3',
     capabilities: {
       streaming: options?.capabilities?.streaming ?? process.env.CAPABILITY_STREAMING === 'true',
       pushNotifications: options?.capabilities?.pushNotifications ?? process.env.CAPABILITY_PUSH_NOTIFICATIONS === 'true',
