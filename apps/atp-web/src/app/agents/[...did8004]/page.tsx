@@ -1,8 +1,5 @@
 import { notFound } from 'next/navigation';
-import {
-  buildDid8004,
-  parseDid8004,
-} from '@agentic-trust/core';
+import { buildDid8004, parseDid8004 } from '@agentic-trust/core';
 import {
   getAgenticTrustClient,
   getAgentValidationsSummary,
@@ -12,13 +9,13 @@ import {
   Box,
   Chip,
   Container,
-  Divider,
   Grid,
   Typography,
   Card,
   CardContent,
 } from '@mui/material';
 import { AgentFeedbackControls } from '../../../components/AgentFeedbackControls';
+import AgentDetailsTabs from '../../../components/AgentDetailsTabs';
 import dynamic from 'next/dynamic';
 
 type DetailsPageParams = {
@@ -349,120 +346,31 @@ export default async function AgentDetailsPage({ params }: DetailsPageParams) {
         </Grid>
 
         <Grid item xs={12} md={8}>
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h5" gutterBottom>
-              Smart Agent details
-            </Typography>
-            {serializedAgent.description && (
-              <Typography variant="body1" sx={{ mb: 2 }}>
-                {serializedAgent.description}
-              </Typography>
-            )}
-            <Typography variant="body2" color="text.secondary">
-              Agent ID: {serializedAgent.agentId}
-            </Typography>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ mt: 1, fontFamily: 'monospace', wordBreak: 'break-all' }}
-            >
-              Agent account: {serializedAgent.agentAccount || '(not provided)'}
-            </Typography>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ mt: 1, fontFamily: 'monospace', wordBreak: 'break-all' }}
-            >
-              A2A endpoint: {serializedAgent.a2aEndpoint || '(not configured)'}
-            </Typography>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ mt: 1, fontFamily: 'monospace', wordBreak: 'break-all' }}
-            >
-              MCP endpoint:{' '}
-              {(serializedAgent.mcp && typeof serializedAgent.mcp === 'object' && (serializedAgent.mcp as any).endpoint) ||
-                '(not configured)'}
-            </Typography>
-          </Box>
-
-          <Divider sx={{ my: 2 }} />
-
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Validations
-            </Typography>
-            {serializedValidations && (serializedValidations.completed.length > 0 || serializedValidations.pending.length > 0) ? (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <Typography variant="subtitle2">Completed</Typography>
-                {serializedValidations.completed.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    No completed validations.
-                  </Typography>
-                ) : (
-                  serializedValidations.completed.map((v, idx) => (
-                    <Typography key={`completed-${idx}`} variant="body2" color="text.secondary">
-                      ✅ {v.requestHash ?? 'unknown request'} · {v.validatorAddress ?? 'unknown validator'}
-                    </Typography>
-                  ))
-                )}
-
-                <Typography variant="subtitle2" sx={{ mt: 2 }}>
-                  Pending
-                </Typography>
-                {serializedValidations.pending.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    No pending validations.
-                  </Typography>
-                ) : (
-                  serializedValidations.pending.map((v, idx) => (
-                    <Typography key={`pending-${idx}`} variant="body2" color="text.secondary">
-                      ⏳ {v.requestHash ?? 'unknown request'} · {v.validatorAddress ?? 'unknown validator'}
-                    </Typography>
-                  ))
-                )}
-              </Box>
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                No validation data available.
-              </Typography>
-            )}
-          </Box>
-
-          <Divider sx={{ my: 2 }} />
-
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Feedback
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {reviewsSummaryText}
-            </Typography>
-            {Array.isArray(serializedFeedback) && serializedFeedback.length > 0 && (
-              <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {serializedFeedback.map((item, idx) => {
-                  const f = item as any;
-                  const score = f.score ?? f.rating ?? null;
-                  const comment = f.comment ?? f.text ?? f.message ?? '';
-                  const reviewer = f.reviewer ?? f.from ?? f.clientAddress ?? '';
-                  return (
-                    <Typography key={`feedback-${idx}`} variant="body2" color="text.secondary">
-                      {score != null ? `⭐ ${score} - ` : ''}{comment || '(no comment)'} {reviewer ? `— ${reviewer}` : ''}
-                    </Typography>
-                  );
-                })}
-              </Box>
-            )}
-          </Box>
-
-          <Divider sx={{ my: 2 }} />
-
-          <AgentFeedbackControls
-            agentId={serializedAgent.agentId}
-            chainId={chainId}
-            agentName={serializedAgent.agentName}
-            agentA2aEndpoint={serializedAgent.a2aEndpoint}
+          <AgentDetailsTabs
+            agent={serializedAgent}
+            feedbackItems={serializedFeedback}
+            feedbackSummary={serializedSummary}
+            validations={serializedValidations}
+            onChainMetadata={{
+              agentAccount: serializedAgent.agentAccount || '',
+              ownerAddress: serializedAgent.ownerAddress || '',
+              did: serializedAgent.did || '',
+            }}
           />
+          <Box sx={{ mt: 3 }}>
+            <AgentFeedbackControls
+              agentId={serializedAgent.agentId}
+              chainId={chainId}
+              agentName={serializedAgent.agentName}
+              agentA2aEndpoint={
+                (serializedAgent.mcp &&
+                  typeof serializedAgent.mcp === 'object' &&
+                  (serializedAgent.mcp as any).endpoint) ||
+                serializedAgent.a2aEndpoint ||
+                undefined
+              }
+            />
+          </Box>
         </Grid>
       </Grid>
     </Container>
