@@ -385,7 +385,6 @@ export default async function AgentDetailsPage({ params }: DetailsPageParams) {
             validations={serializedValidations}
             onChainMetadata={onChainMetadataForTabs}
           />
-          {/* @ts-expect-error Suppress union complexity for feedback controls */}
           <Box sx={{ mt: 3 }}>
             <AgentFeedbackControls {...(feedbackControlProps as any)} />
           </Box>
