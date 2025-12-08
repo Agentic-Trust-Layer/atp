@@ -444,7 +444,7 @@ export default function DashboardPage() {
   const [sessionPackageError, setSessionPackageError] = React.useState<string | null>(null);
   const [feedbackDialogConfig, setFeedbackDialogConfig] =
     React.useState<GiveFeedbackDialogConfig | null>(null);
-  const [dashboardTab, setDashboardTab] = React.useState(DASHBOARD_TABS.agentInfo);
+  const [dashboardTab, setDashboardTab] = React.useState<number>(DASHBOARD_TABS.agentInfo);
   const [feedbackModalOpen, setFeedbackModalOpen] = React.useState(false);
   const [validationsModalOpen, setValidationsModalOpen] = React.useState(false);
   const [feedbackData, setFeedbackData] = React.useState<{
@@ -1012,7 +1012,7 @@ export default function DashboardPage() {
   React.useEffect(() => {
     const shouldFetch =
       agentInfo?.did &&
-      (validationsModalOpen || dashboardTab === DASHBOARD_TABS.trustGraph);
+      (validationsModalOpen || Number(dashboardTab) === DASHBOARD_TABS.trustGraph);
     if (!shouldFetch) {
       return;
     }
@@ -1422,7 +1422,7 @@ export default function DashboardPage() {
         </Tabs>
 
         {/* Overview Tab */}
-        {dashboardTab === DASHBOARD_TABS.agentInfo && (
+        {Number(dashboardTab) === DASHBOARD_TABS.agentInfo && (
           <CardContent sx={{ p: 4 }}>
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
                 <Typography variant="h5" fontWeight={600} color="text.primary">
@@ -1746,7 +1746,7 @@ export default function DashboardPage() {
           )}
 
           {/* Applications Tab */}
-            {dashboardTab === DASHBOARD_TABS.appDetails && (
+            {Number(dashboardTab) === DASHBOARD_TABS.appDetails && (
             <CardContent sx={{ p: 4 }}>
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
                 <Typography variant="h5" fontWeight={600} color="text.primary">
@@ -1817,7 +1817,7 @@ export default function DashboardPage() {
           )}
 
           {/* Trust Graph Tab */}
-          {dashboardTab === DASHBOARD_TABS.trustGraph && (
+          {Number(dashboardTab) === DASHBOARD_TABS.trustGraph && (
             <CardContent sx={{ p: 4 }}>
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
                 <Typography variant="h5" fontWeight={600} color="text.primary">
@@ -1911,7 +1911,7 @@ export default function DashboardPage() {
           )}
 
             {/* Account Tab */}
-            {dashboardTab === DASHBOARD_TABS.account && (
+            {Number(dashboardTab) === DASHBOARD_TABS.account && (
               <CardContent sx={{ p: 4 }}>
               <Typography variant="h5" gutterBottom fontWeight={600} color="text.primary">
                   Account
