@@ -22,6 +22,7 @@ export type AgentsPageAgent = {
   validationPendingCount: number | null;
   validationCompletedCount: number | null;
   validationRequestedCount: number | null;
+  supportedTrust?: string | Record<string, unknown> | null;
 };
 
 export type AgentDetailsFeedbackSummary =

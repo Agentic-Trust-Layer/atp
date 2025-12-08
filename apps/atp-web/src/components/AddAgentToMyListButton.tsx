@@ -42,17 +42,15 @@ export function AddAgentToMyListButton({
     return owner ?? acct ?? null;
   }, [ownerAddress, agentAccount]);
 
-  // Allow if:
-  // - user + wallet connected
-  // - owner check is not explicitly false (null/unknown or true are allowed)
-  // - if we have an owner hint, it must match the wallet
-  const canAdd = Boolean(
-    user?.email &&
-    isConnected &&
-    normalizedWallet &&
-    (isOwner !== false) &&
-    (!normalizedOwner || normalizedWallet === normalizedOwner)
-  );
+  // Ownership allowance:
+  // - Explicit true from server wins
+  // - If server says false, block
+  // - If unknown (null) use on-chain hint: allow when owner hint absent or matches wallet
+  const ownershipAllowed =
+    isOwner === true ||
+    (isOwner !== false && (!normalizedOwner || normalizedWallet === normalizedOwner));
+
+  const canAdd = Boolean(user?.email && isConnected && normalizedWallet && ownershipAllowed);
 
   // Server-side ownership check (best-effort)
   React.useEffect(() => {
@@ -163,13 +161,13 @@ export function AddAgentToMyListButton({
         title={
           !isConnected
             ? "Connect your wallet to add this agent."
-            : normalizedOwner && normalizedWallet !== normalizedOwner
-              ? "You must be the agent owner to add it."
-              : isOwner === false
-                ? "Ownership check failed: you are not the owner."
-              : !user?.email
-                ? "Sign in to add this agent."
-                : ""
+            : isOwner === false
+              ? "Ownership check failed: you are not the owner."
+              : normalizedOwner && normalizedWallet !== normalizedOwner
+                ? "Wallet must match the agent owner."
+                : !user?.email
+                  ? "Sign in to add this agent."
+                  : ""
         }
       >
         <span>

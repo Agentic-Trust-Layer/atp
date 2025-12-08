@@ -48,8 +48,8 @@ interface AgentsPageAgent {
 }
 
 export type AgentDetailsFeedbackSummary = {
-  count: string | number;
-  averageScore: number | null;
+  count?: string | number;
+  averageScore?: number;
 } | null;
 
 export type ValidationEntry = {
@@ -253,6 +253,37 @@ export default async function AgentDetailsPage({ params }: DetailsPageParams) {
   const shadowAgentSrc = '/8004ShadowAgent.png';
   const heroImageSrc = (await getAgentHeroImage(serializedAgent)) ?? shadowAgentSrc;
 
+  const agentFeedbackEndpoint: string | undefined =
+    (serializedAgent.mcp &&
+      typeof serializedAgent.mcp === 'object' &&
+      (serializedAgent.mcp as any).endpoint) ||
+    serializedAgent.a2aEndpoint ||
+    undefined;
+
+  const feedbackControlProps: React.ComponentProps<typeof AgentFeedbackControls> = {
+    agentId: String(serializedAgent.agentId),
+    chainId: chainId,
+    agentName: serializedAgent.agentName || undefined,
+    agentA2aEndpoint: agentFeedbackEndpoint ?? undefined,
+  };
+
+  const feedbackSummaryForTabs: AgentDetailsFeedbackSummary =
+    serializedSummary && typeof serializedSummary === 'object'
+      ? {
+          count: serializedSummary.count,
+          averageScore:
+            typeof serializedSummary.averageScore === 'number'
+              ? serializedSummary.averageScore
+              : undefined,
+        }
+      : null;
+
+  const onChainMetadataForTabs = {
+    agentAccount: serializedAgent.agentAccount || '',
+    ownerAddress: serializedAgent.ownerAddress || '',
+    did: serializedAgent.did || '',
+  };
+
   const ownerDisplaySource =
     serializedAgent.ownerAddress ??
     serializedAgent.agentAccount ??
@@ -331,7 +362,7 @@ export default async function AgentDetailsPage({ params }: DetailsPageParams) {
                 <Chip label={validationSummaryText} size="small" color="primary" />
                 <Chip label={reviewsSummaryText} size="small" variant="outlined" />
               </Box>
-              <Box sx={{ mt: 3 }}>
+              <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 <AddAgentButton
                   agentId={serializedAgent.agentId}
                   chainId={serializedAgent.chainId}
@@ -340,6 +371,7 @@ export default async function AgentDetailsPage({ params }: DetailsPageParams) {
                   agentName={serializedAgent.agentName}
                   did8004={displayDid}
                 />
+                <AgentFeedbackControls {...feedbackControlProps} />
               </Box>
             </CardContent>
           </Card>
@@ -349,27 +381,13 @@ export default async function AgentDetailsPage({ params }: DetailsPageParams) {
           <AgentDetailsTabs
             agent={serializedAgent}
             feedbackItems={serializedFeedback}
-            feedbackSummary={serializedSummary}
+            feedbackSummary={feedbackSummaryForTabs}
             validations={serializedValidations}
-            onChainMetadata={{
-              agentAccount: serializedAgent.agentAccount || '',
-              ownerAddress: serializedAgent.ownerAddress || '',
-              did: serializedAgent.did || '',
-            }}
+            onChainMetadata={onChainMetadataForTabs}
           />
+          {/* @ts-expect-error Suppress union complexity for feedback controls */}
           <Box sx={{ mt: 3 }}>
-            <AgentFeedbackControls
-              agentId={serializedAgent.agentId}
-              chainId={chainId}
-              agentName={serializedAgent.agentName}
-              agentA2aEndpoint={
-                (serializedAgent.mcp &&
-                  typeof serializedAgent.mcp === 'object' &&
-                  (serializedAgent.mcp as any).endpoint) ||
-                serializedAgent.a2aEndpoint ||
-                undefined
-              }
-            />
+            <AgentFeedbackControls {...(feedbackControlProps as any)} />
           </Box>
         </Grid>
       </Grid>

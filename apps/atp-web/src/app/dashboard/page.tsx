@@ -45,11 +45,27 @@ import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
 import { sepolia, baseSepolia, optimismSepolia } from "viem/chains";
 import { updateAgentRegistrationWithWallet, getDeployedAccountClientByAgentName, generateSessionPackage } from "@agentic-trust/core";
 import { buildDid8004 } from "@my-scope/core";
-import { getChainById } from "@agentic-trust/core/server";
+import { getChainById, getAgenticTrustClient } from "@agentic-trust/core/server";
 import { getUserProfile, getUserAgents, saveUserProfile, associateUserWithAgent } from "../../app/service/userProfileService";
 import type { UserProfile, AgentAssociation } from "../../app/service/userProfileService";
 import { GiveFeedbackDialog, type GiveFeedbackDialogConfig } from "../../components/GiveFeedbackDialog";
 import { approveFeedbackRequestAction } from "../../lib/feedbackActions";
+import {
+  ReactFlow,
+  Background as ReactFlowBackground,
+  Controls as ReactFlowControls,
+  MiniMap as ReactFlowMiniMap,
+  type Node as RFNode,
+  type Edge as RFEdge,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+
+const DASHBOARD_TABS = {
+  agentInfo: 0,   // Overview
+  account: 1,     // Account
+  appDetails: 2,  // Applications
+  trustGraph: 3,  // Trust Graph
+} as const;
 
 interface AgentInfo {
   ensName?: string;
@@ -85,6 +101,298 @@ function getBundlerUrlForId(chainId: number) {
   if (chainId === 84532) return process.env.NEXT_PUBLIC_AGENTIC_TRUST_BUNDLER_URL_BASE_SEPOLIA;
   if (chainId === 11155420) return process.env.NEXT_PUBLIC_AGENTIC_TRUST_BUNDLER_URL_OPTIMISM_SEPOLIA;
   return process.env.NEXT_PUBLIC_AGENTIC_TRUST_BUNDLER_URL_SEPOLIA;
+}
+
+type TrustGraphViewProps = {
+  agentName: string;
+  reviewsSummary: { count: number | string; avg: number | null };
+  validations: { completed: any[]; pending: any[] };
+  alliances: string[];
+  onOpenReviews: () => void;
+  onOpenValidations: () => void;
+  resolveEnsName: (addr?: string | null) => Promise<string | null>;
+};
+
+type GraphNode = {
+  id: string;
+  label: string;
+  x: number;
+  y: number;
+  color: string;
+  type: "agent" | "reviews" | "validation" | "alliance";
+  data?: any;
+};
+
+function TrustGraphView({ agentName, reviewsSummary, validations, alliances, onOpenReviews, onOpenValidations, resolveEnsName }: TrustGraphViewProps) {
+  const [selectedNode, setSelectedNode] = React.useState<GraphNode | null>(null);
+  const [selectedEns, setSelectedEns] = React.useState<string | null>(null);
+
+  const nodes = React.useMemo<GraphNode[]>(() => {
+    const reviewNode: GraphNode = {
+      id: "reviews",
+      label: `Reviews (${reviewsSummary.count ?? "0"})`,
+      x: 0,
+      y: 0,
+      color: "#2563eb",
+      type: "reviews",
+    };
+    const agentNode: GraphNode = {
+      id: "agent",
+      label: agentName,
+      x: 0,
+      y: 0,
+      color: "#0f172a",
+      type: "agent",
+    };
+
+    const completedValidationNodes: GraphNode[] = (validations.completed || [])
+      .slice(0, 25)
+      .map((v, idx) => ({
+        id: `val-completed-${idx}`,
+        label: v.validatorAddress ? `${v.validatorAddress.slice(0, 6)}…${v.validatorAddress.slice(-4)}` : "Validator",
+        x: 0,
+        y: 0,
+        color: "#16a34a",
+        type: "validation",
+        data: { ...v, status: "completed" as const },
+      }));
+
+    const pendingValidationNodes: GraphNode[] = (validations.pending || [])
+      .slice(0, 25)
+      .map((v, idx) => ({
+        id: `val-pending-${idx}`,
+        label: v.validatorAddress ? `${v.validatorAddress.slice(0, 6)}…${v.validatorAddress.slice(-4)}` : "Validator",
+        x: 0,
+        y: 0,
+        color: "#16a34a",
+        type: "validation",
+        data: { ...v, status: "pending" as const },
+      }));
+
+    const validationNodes: GraphNode[] = [...completedValidationNodes, ...pendingValidationNodes];
+
+    const allianceNodes: GraphNode[] = (alliances || []).slice(0, 12).map((a, idx) => ({
+      id: `ally-${idx}`,
+      label: a,
+      x: 0,
+      y: 0,
+      color: "#9333ea",
+      type: "alliance",
+      data: { name: a },
+    }));
+
+    return [agentNode, reviewNode, ...validationNodes, ...allianceNodes];
+  }, [agentName, reviewsSummary, validations, alliances]);
+
+  const edges = React.useMemo(() => {
+    const base: Array<{ id: string; source: string; target: string }> = [{ id: "e-agent-reviews", source: "agent", target: "reviews" }];
+    nodes.forEach((n, idx) => {
+      if (n.type === "validation" || n.type === "alliance") {
+        base.push({ id: `e-${n.id}-${idx}`, source: "agent", target: n.id });
+      }
+    });
+    return base;
+  }, [nodes]);
+
+  const rfNodes = React.useMemo<RFNode[]>(() => {
+    const centerX = 0;
+    const topY = -150;
+    let validationIndex = 0;
+    let allianceIndex = 0;
+
+    return nodes.map((n) => {
+      let x = centerX;
+      let y = topY;
+
+      if (n.type === "agent") {
+        // Selected agent at the top center
+        x = centerX;
+        y = topY;
+      } else if (n.type === "reviews") {
+        // Reviews directly below-left of agent
+        x = centerX - 220;
+        y = topY + 130;
+      } else if (n.type === "validation") {
+        // Validators aligned vertically on far right
+        const i = validationIndex++;
+        x = centerX + 260;
+        y = topY + 80 + i * 70;
+      } else if (n.type === "alliance") {
+        // Alliance agents stacked directly under the selected agent
+        const i = allianceIndex++;
+        x = centerX;
+        y = topY + 180 + i * 70;
+      }
+
+      return {
+        id: n.id,
+        position: { x, y },
+        data: { label: n.label, graphNode: n },
+        style: {
+          borderRadius: 16,
+          padding: "8px 12px",
+          border: `1px solid ${n.color}`,
+          background: "#ffffff",
+          color: "#0f172a",
+          fontSize: 12,
+          fontWeight: 600,
+        },
+      } satisfies RFNode;
+    });
+  }, [nodes]);
+
+  const rfEdges = React.useMemo<RFEdge[]>(
+    () =>
+      edges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        animated: true,
+        style: { strokeWidth: 1.5 },
+      })),
+    [edges]
+  );
+
+  // Force React Flow to remount when validation data changes so that
+  // new validator nodes appear immediately without a full page refresh.
+  const flowKey = React.useMemo(
+    () =>
+      `tg-${reviewsSummary.count ?? 0}-${validations.completed?.length ?? 0}-${
+        validations.pending?.length ?? 0
+      }`,
+    [reviewsSummary.count, validations.completed?.length, validations.pending?.length]
+  );
+
+  const onNodeClick = React.useCallback(
+    async (node: GraphNode) => {
+      setSelectedNode(node);
+      setSelectedEns(null);
+      if (node.type === "reviews") {
+        onOpenReviews();
+        return;
+      }
+      if (node.type === "validation" && node.data?.validatorAddress) {
+        const ens = await resolveEnsName(node.data.validatorAddress);
+        if (ens) setSelectedEns(ens);
+      }
+    },
+    [onOpenReviews, resolveEnsName]
+  );
+
+  return (
+    <Paper
+      variant="outlined"
+      sx={{
+        p: 2,
+        borderRadius: 2,
+        borderColor: "divider",
+        bgcolor: "background.paper",
+        height: 520,
+      }}
+    >
+      <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+        Interactive Trust Graph
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        Pan to move, scroll to zoom. Nodes show reviews, validators, and alliance agents relative to the selected agent.
+      </Typography>
+      <Box
+        sx={{
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 1,
+          height: 440,
+          overflow: "hidden",
+        }}
+      >
+        <ReactFlow
+          key={flowKey}
+          nodes={rfNodes}
+          edges={rfEdges}
+          fitView
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable
+          onNodeClick={(_, node) => {
+            const g = (node.data as any)?.graphNode as GraphNode | undefined;
+            if (g) {
+              void onNodeClick(g);
+            }
+          }}
+        >
+          <ReactFlowBackground />
+          <ReactFlowMiniMap pannable zoomable />
+          <ReactFlowControls showInteractive={false} />
+        </ReactFlow>
+      </Box>
+      {selectedNode && (
+        <Paper
+          variant="outlined"
+          sx={{
+            mt: 2,
+            p: 2,
+            borderRadius: 2,
+            borderColor: "divider",
+            bgcolor: "grey.50",
+          }}
+        >
+          <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+            Node Details
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Type: {selectedNode.type}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Label: {selectedNode.label}
+          </Typography>
+          {selectedNode.type === "validation" && selectedNode.data?.validatorAddress && (
+            <>
+              <Typography variant="body2" color="text.secondary">
+                Validator: {selectedEns || selectedNode.data.validatorAddress}
+              </Typography>
+              {selectedNode.data.status && (
+                <Typography variant="body2" color="text.secondary">
+                  Status: {selectedNode.data.status === "completed" ? "Completed" : "Pending"}
+                </Typography>
+              )}
+              {selectedNode.data.response !== undefined && (
+                <Typography variant="body2" color="text.secondary">
+                  Response: {selectedNode.data.response}
+                </Typography>
+              )}
+              {selectedNode.data.requestHash && (
+                <Typography variant="body2" color="text.secondary">
+                  Request: {selectedNode.data.requestHash}
+                </Typography>
+              )}
+              {selectedNode.data.txHash && (
+                <Typography variant="body2" color="text.secondary">
+                  Tx Hash: {selectedNode.data.txHash}
+                </Typography>
+              )}
+            </>
+          )}
+          {selectedNode.type === "alliance" && selectedNode.data?.name && (
+            <>
+              <Typography variant="body2" color="text.secondary">
+                Alliance Agent: {selectedNode.data.name}
+              </Typography>
+              {selectedNode.data.agentId && (
+                <Typography variant="body2" color="text.secondary">
+                  Agent ID: {selectedNode.data.agentId}
+                </Typography>
+              )}
+              {selectedNode.data.ensName && (
+                <Typography variant="body2" color="text.secondary">
+                  ENS: {selectedNode.data.ensName}
+                </Typography>
+              )}
+            </>
+          )}
+        </Paper>
+      )}
+    </Paper>
+  );
 }
 
 export default function DashboardPage() {
@@ -136,7 +444,7 @@ export default function DashboardPage() {
   const [sessionPackageError, setSessionPackageError] = React.useState<string | null>(null);
   const [feedbackDialogConfig, setFeedbackDialogConfig] =
     React.useState<GiveFeedbackDialogConfig | null>(null);
-  const [dashboardTab, setDashboardTab] = React.useState(0);
+  const [dashboardTab, setDashboardTab] = React.useState(DASHBOARD_TABS.agentInfo);
   const [feedbackModalOpen, setFeedbackModalOpen] = React.useState(false);
   const [validationsModalOpen, setValidationsModalOpen] = React.useState(false);
   const [feedbackData, setFeedbackData] = React.useState<{
@@ -259,6 +567,140 @@ export default function DashboardPage() {
     },
     [agentInfo, defaultOrgAgent, resolvedAgentA2aEndpoint, resolvedAgentDisplayName],
   );
+
+  const handleOpenSessionPackage = React.useCallback(async () => {
+    if (!agentInfo?.did) return;
+
+    setSessionPackageModalOpen(true);
+    setLoadingSessionPackage(true);
+    setSessionPackageError(null);
+    setSessionPackageData(null);
+
+    if (agentInfo.ensName) {
+      try {
+        const res = await fetch(`/api/agents/session-package?ensName=${encodeURIComponent(agentInfo.ensName)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.sessionPackage) {
+            console.log('[dashboard/page] Found existing session package in database');
+            setSessionPackageData(data.sessionPackage);
+            setLoadingSessionPackage(false);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('[dashboard/page] Failed to fetch existing session package:', e);
+      }
+    }
+
+    try {
+      if (!web3auth?.provider) {
+        throw new Error('Connect your wallet to generate a session package.');
+      }
+
+      if (!agentInfo.agentAccount || !agentInfo.agentAccount.startsWith('0x')) {
+        throw new Error('Agent account is missing or invalid.');
+      }
+
+      let currentWalletAddress = walletAddress;
+      if (!currentWalletAddress) {
+        try {
+          const { getWalletAddress } = await import('@agentic-trust/core/client');
+          currentWalletAddress = await getWalletAddress(web3auth.provider);
+        } catch (err) {
+          console.warn('[dashboard/page] Failed to get wallet address:', err);
+        }
+      }
+
+      if (!currentWalletAddress) {
+        throw new Error('Could not determine wallet address. Please connect your wallet.');
+      }
+
+      let chainId: number;
+      let agentIdNumeric: number;
+
+      if (agentInfo.chainId && agentInfo.agentId) {
+        chainId =
+          typeof agentInfo.chainId === 'number'
+            ? agentInfo.chainId
+            : Number.parseInt(String(agentInfo.chainId), 10);
+
+        agentIdNumeric =
+          typeof agentInfo.agentId === 'number'
+            ? agentInfo.agentId
+            : typeof agentInfo.agentId === 'bigint'
+              ? Number(agentInfo.agentId)
+              : Number.parseInt(String(agentInfo.agentId), 10);
+      } else if (agentInfo.did) {
+        const didParts = agentInfo.did.split(':');
+        if (didParts.length >= 4 && didParts[0] === 'did' && didParts[1] === '8004') {
+          chainId = Number.parseInt(didParts[2], 10);
+          agentIdNumeric = Number.parseInt(didParts.slice(3).join(':'), 10);
+        } else {
+          throw new Error('Could not determine agent ID and chain ID. Please ensure agent information is complete.');
+        }
+      } else {
+        throw new Error('Agent ID and chain ID are required to generate session package.');
+      }
+
+      if (!Number.isFinite(chainId) || !Number.isFinite(agentIdNumeric)) {
+        throw new Error('Invalid agent ID or chain ID.');
+      }
+
+      const chain = getChainById(chainId);
+      if (!chain) {
+        throw new Error(`Unsupported chain ID: ${chainId}`);
+      }
+
+      const bundlerUrl = getBundlerUrlForId(chain.id);
+      if (!bundlerUrl) {
+        throw new Error(
+          "Missing bundler URL configuration for this chain. Set NEXT_PUBLIC_AGENTIC_TRUST_BUNDLER_URL_* env vars."
+        );
+      }
+
+      const accountClient = await getDeployedAccountClientByAgentName(
+        bundlerUrl,
+        agentInfo.name ?? agentInfo.ensName ?? '',
+        currentWalletAddress as `0x${string}`,
+        {
+          chain,
+          ethereumProvider: web3auth.provider as any,
+        }
+      );
+
+      const sp = await generateSessionPackage({
+        chainId: chain.id,
+        agentId: Number(agentIdNumeric),
+        agentAccount: agentInfo.agentAccount as `0x${string}`,
+        provider: web3auth.provider as any,
+        ownerAddress: currentWalletAddress as `0x${string}`,
+        bundlerUrl,
+      });
+
+      setSessionPackageData(sp);
+
+      try {
+        if (agentInfo.ensName) {
+          await fetch('/api/agents/session-package', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ensName: agentInfo.ensName,
+              sessionPackage: sp,
+            }),
+          });
+        }
+      } catch (persistErr) {
+        console.warn('[dashboard/page] Failed to persist session package:', persistErr);
+      }
+    } catch (err: any) {
+      console.error("[dashboard/page] Failed to generate session package:", err);
+      setSessionPackageError(err?.message || "Failed to generate session package.");
+    } finally {
+      setLoadingSessionPackage(false);
+    }
+  }, [agentInfo, walletAddress, web3auth?.provider]);
 
   const closeFeedbackDialog = React.useCallback(() => {
     setFeedbackDialogConfig(null);
@@ -566,9 +1008,12 @@ export default function DashboardPage() {
     };
   }, [feedbackModalOpen, agentInfo?.did]);
 
-  // Fetch validations data when modal opens
+  // Fetch validations data when modal opens OR when Trust Graph tab is active
   React.useEffect(() => {
-    if (!validationsModalOpen || !agentInfo?.did) {
+    const shouldFetch =
+      agentInfo?.did &&
+      (validationsModalOpen || dashboardTab === DASHBOARD_TABS.trustGraph);
+    if (!shouldFetch) {
       return;
     }
 
@@ -619,7 +1064,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [validationsModalOpen, agentInfo?.did]);
+  }, [validationsModalOpen, dashboardTab, agentInfo?.did]);
 
   // Fetch feedback and validations counts when agentInfo is available
   React.useEffect(() => {
@@ -859,13 +1304,22 @@ export default function DashboardPage() {
     }
   }, [loading, error, agentInfo]);
 
-  // Compute tab indices based on what's available - MUST be before early return
-  const getTabIndex = React.useMemo(() => {
-    let idx = 0;
-    return {
-      agentInfo: idx++,
-      account: idx++,
-    };
+  const resolveEnsName = React.useCallback(async (addr?: string | null) => {
+    if (!addr || !addr.startsWith("0x")) return null;
+    try {
+      const client = await getAgenticTrustClient();
+      if (typeof (client as any).resolveEnsName === "function") {
+        const res = await (client as any).resolveEnsName(addr);
+        if (res) return res;
+      }
+      if ((client as any).ensClient?.getName) {
+        const res = await (client as any).ensClient.getName(addr);
+        if (res?.name) return res.name;
+      }
+    } catch (err) {
+      console.warn("[dashboard/page] ENS resolve failed:", err);
+    }
+    return null;
   }, []);
 
   // Loading state - show for loading, error, or no agent info
@@ -961,16 +1415,18 @@ export default function DashboardPage() {
             },
           }}
         >
-          <Tab label="Agent Information" />
-          <Tab label="Account Details" />
+          <Tab label="Overview" />
+          <Tab label="Account" />
+          <Tab label="Applications" />
+          <Tab label="Trust Graph" />
         </Tabs>
 
-        {/* Agent Tab */}
-        {dashboardTab === getTabIndex.agentInfo && (
+        {/* Overview Tab */}
+        {dashboardTab === DASHBOARD_TABS.agentInfo && (
           <CardContent sx={{ p: 4 }}>
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
                 <Typography variant="h5" fontWeight={600} color="text.primary">
-                  Agent Information
+                  Overview
                 </Typography>
                 {agentInfo.did && (
                   <Button
@@ -1286,263 +1742,179 @@ export default function DashboardPage() {
                 </Paper>
                 );
               })()}
+            </CardContent>
+          )}
 
-              {/* Action Icons - Bottom Right */}
-              {agentInfo.did && (
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    p: 2,
-                    mt: 3,
-                    borderRadius: 2,
-                    bgcolor: 'grey.50',
-                    borderColor: 'grey.300',
-                  }}
+          {/* Applications Tab */}
+            {dashboardTab === DASHBOARD_TABS.appDetails && (
+            <CardContent sx={{ p: 4 }}>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                <Typography variant="h5" fontWeight={600} color="text.primary">
+                  Applications
+                </Typography>
+                <Button
+                  variant="contained"
+                  size="medium"
+                  startIcon={<FileDownloadIcon />}
+                  onClick={() => handleOpenSessionPackage()}
+                  disabled={!agentInfo?.did}
+                  sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}
                 >
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
-                    Quick Actions
-                  </Typography>
-                  <Box 
-                    display="flex" 
-                    justifyContent="flex-start" 
-                    gap={1.5} 
-                    mt={2}
-                    flexWrap="wrap"
+                  Update Session Package
+                </Button>
+              </Box>
+
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 3,
+                      borderRadius: 2,
+                      bgcolor: 'background.paper',
+                      borderColor: 'divider',
+                      height: '100%',
+                    }}
                   >
-                    <Tooltip title="View NFT TokenURI">
-                      <IconButton
-                        onClick={async () => {
-                        if (!agentInfo.did) return;
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
+                      A2A Endpoint
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontFamily: 'monospace', wordBreak: 'break-all', color: 'text.primary' }}
+                    >
+                      {resolvedAgentA2aEndpoint || 'Not configured'}
+                    </Typography>
+                  </Paper>
+                </Grid>
 
-                        setTokenUriModalOpen(true);
-                        setLoadingTokenUri(true);
-                        setTokenUriError(null);
-                        setTokenUriData(null);
-                        try {
-                          // First, try to load from long-term browser cache
-                          const cacheKey = `arn_agent_details_${agentInfo.did}`;
-                          try {
-                            const cached = typeof window !== "undefined"
-                              ? localStorage.getItem(cacheKey)
-                              : null;
-                            if (cached) {
-                              const parsed = JSON.parse(cached);
-                              setTokenUriData(parsed);
-                              setLoadingTokenUri(false);
-                              return;
-                            }
-                          } catch (cacheError) {
-                            console.warn("[dashboard/page] Failed to read cached agent details:", cacheError);
-                          }
+                <Grid item xs={12} md={6}>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 3,
+                      borderRadius: 2,
+                      bgcolor: 'background.paper',
+                      borderColor: 'divider',
+                      height: '100%',
+                    }}
+                  >
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
+                      MCP Endpoint
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontFamily: 'monospace', wordBreak: 'break-all', color: 'text.primary' }}
+                    >
+                      {(agentInfo?.mcpEndpoint ||
+                        (agentInfo?.mcp && typeof agentInfo.mcp === 'object' && (agentInfo.mcp as any).endpoint)) ||
+                        'Not configured'}
+                    </Typography>
+                  </Paper>
+                </Grid>
+              </Grid>
+            </CardContent>
+          )}
 
-                          // Fallback to API if not cached
-                          const response = await fetch(`/api/agents/token-uri?did=${encodeURIComponent(agentInfo.did!)}`);
-                          if (!response.ok) {
-                            const error = await response.json();
-                            throw new Error(error.message || 'Failed to fetch tokenUri');
-                          }
-                          const data = await response.json();
-                          setTokenUriData(data);
+          {/* Trust Graph Tab */}
+          {dashboardTab === DASHBOARD_TABS.trustGraph && (
+            <CardContent sx={{ p: 4 }}>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                <Typography variant="h5" fontWeight={600} color="text.primary">
+                  Trust Graph
+                </Typography>
+              </Box>
 
-                           // Store in long-term cache
-                           try {
-                             if (typeof window !== "undefined") {
-                               const cacheKey = `arn_agent_details_${agentInfo.did}`;
-                               localStorage.setItem(cacheKey, JSON.stringify(data));
-                             }
-                           } catch (cacheWriteError) {
-                             console.warn("[dashboard/page] Failed to cache agent details:", cacheWriteError);
-                           }
-                        } catch (err) {
-                          console.error('Failed to fetch tokenUri:', err);
-                          setTokenUriError(err instanceof Error ? err.message : 'Failed to fetch tokenUri');
-                        } finally {
-                          setLoadingTokenUri(false);
-                        }
-                      }}
-                        sx={{
-                          bgcolor: 'background.paper',
-                          '&:hover': {
-                            bgcolor: 'action.hover',
-                          },
-                        }}
-                      >
-                        <VisibilityIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Session Package">
-                      <IconButton
-                        color="secondary"
-                        onClick={async () => {
-                        if (!agentInfo.did) return;
+              <Grid container spacing={3} sx={{ mb: 3 }}>
+                <Grid item xs={12} md={6}>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 3,
+                      borderRadius: 2,
+                      bgcolor: 'background.paper',
+                      borderColor: 'divider',
+                    }}
+                  >
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
+                      Reviews
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 1, cursor: 'pointer', textDecoration: 'underline' }}
+                      onClick={() => setFeedbackModalOpen(true)}
+                    >
+                      Feedback entries and reputation summary for this agent. Click to view all reviews.
+                    </Typography>
+                    <Typography variant="body1" fontWeight={600}>
+                      Count: {feedbackData.summary?.count ?? feedbackCount ?? 0}
+                    </Typography>
+                    <Typography variant="body1" fontWeight={600}>
+                      Average score:{" "}
+                      {typeof feedbackData.summary?.averageScore === "number"
+                        ? feedbackData.summary.averageScore.toFixed(2)
+                        : "N/A"}
+                    </Typography>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 3,
+                      borderRadius: 2,
+                      bgcolor: 'background.paper',
+                      borderColor: 'divider',
+                    }}
+                  >
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
+                      Validators
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 1, cursor: 'pointer', textDecoration: 'underline' }}
+                      onClick={() => setValidationsModalOpen(true)}
+                    >
+                      Pending and completed validations impacting this agent. Click to view all validations.
+                    </Typography>
+                    <Typography variant="body1" fontWeight={600}>
+                      Completed: {validationsData.completed?.length ?? 0}
+                    </Typography>
+                    <Typography variant="body1" fontWeight={600}>
+                      Pending: {validationsData.pending?.length ?? 0}
+                    </Typography>
+                  </Paper>
+                </Grid>
+              </Grid>
 
-                        setSessionPackageModalOpen(true);
-                        setLoadingSessionPackage(true);
-                        setSessionPackageError(null);
-                        setSessionPackageData(null);
-                        
-                        // Try to fetch existing session package from database first
-                        if (agentInfo.ensName) {
-                          try {
-                            const res = await fetch(`/api/agents/session-package?ensName=${encodeURIComponent(agentInfo.ensName)}`);
-                            if (res.ok) {
-                              const data = await res.json();
-                              if (data.sessionPackage) {
-                                console.log('[dashboard/page] Found existing session package in database');
-                                setSessionPackageData(data.sessionPackage);
-                                setLoadingSessionPackage(false);
-                                return;
-                              }
-                            }
-                          } catch (e) {
-                            console.warn('[dashboard/page] Failed to fetch existing session package:', e);
-                          }
-                        }
-
-                        try {
-                          // Validate required dependencies
-                          if (!web3auth?.provider) {
-                            throw new Error('Connect your wallet to generate a session package.');
-                          }
-
-                          if (!agentInfo.agentAccount || !agentInfo.agentAccount.startsWith('0x')) {
-                            throw new Error('Agent account is missing or invalid.');
-                          }
-
-                          // Get wallet address if not available
-                          let currentWalletAddress = walletAddress;
-                          if (!currentWalletAddress) {
-                            try {
-                              const { getWalletAddress } = await import('@agentic-trust/core/client');
-                              currentWalletAddress = await getWalletAddress(web3auth.provider);
-                            } catch (err) {
-                              console.warn('[dashboard/page] Failed to get wallet address:', err);
-                            }
-                          }
-
-                          if (!currentWalletAddress) {
-                            throw new Error('Could not determine wallet address. Please connect your wallet.');
-                          }
-
-                          // Use agentId and chainId directly from agentInfo, or extract from DID if needed
-                          let chainId: number;
-                          let agentIdNumeric: number;
-
-                          if (agentInfo.chainId && agentInfo.agentId) {
-                            // Use direct values if available
-                            chainId = typeof agentInfo.chainId === 'number' 
-                              ? agentInfo.chainId 
-                              : Number.parseInt(String(agentInfo.chainId), 10);
-                            
-                            agentIdNumeric = typeof agentInfo.agentId === 'number'
-                              ? agentInfo.agentId
-                              : typeof agentInfo.agentId === 'bigint'
-                              ? Number(agentInfo.agentId)
-                              : Number.parseInt(String(agentInfo.agentId), 10);
-                          } else if (agentInfo.did) {
-                            // Fallback: try to extract from DID if direct values not available
-                            const didParts = agentInfo.did.split(':');
-                            if (didParts.length >= 4 && didParts[0] === 'did' && didParts[1] === '8004') {
-                              chainId = Number.parseInt(didParts[2], 10);
-                              agentIdNumeric = Number.parseInt(didParts.slice(3).join(':'), 10);
-                            } else {
-                              throw new Error('Could not determine agent ID and chain ID. Please ensure agent information is complete.');
-                            }
-                          } else {
-                            throw new Error('Agent ID and chain ID are required to generate session package.');
-                          }
-
-                          if (!Number.isFinite(chainId) || !Number.isFinite(agentIdNumeric)) {
-                            throw new Error('Invalid agent ID or chain ID.');
-                          }
-
-                          // Try to generate session package using generateSessionPackage from core
-                          // If it fails (e.g., missing env vars), fall back to API endpoint
-                          let sessionPkg: any = null;
-                          try {
-                            console.info('[dashboard/page] Calling generateSessionPackage...');
-                            sessionPkg = await generateSessionPackage({
-                              agentId: agentIdNumeric,
-                              chainId,
-                              agentAccount: agentInfo.agentAccount as `0x${string}`,
-                              provider: web3auth.provider as any,
-                              ownerAddress: currentWalletAddress as `0x${string}`,
-                            });
-                            console.info('[dashboard/page] session package generated:', sessionPkg ? 'success' : 'null');
-                            
-                            if (!sessionPkg) {
-                              throw new Error('Failed to generate session package (returned null)');
-                            }
-                            
-                            // Save sessionPackage to database
-                            if (sessionPkg && agentInfo.ensName) {
-                              try {
-                                const saveResponse = await fetch('/api/agents/session-package', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({
-                                    ensName: agentInfo.ensName,
-                                    sessionPackage: sessionPkg,
-                                  }),
-                                });
-                                
-                                if (saveResponse.ok) {
-                                  console.info('[dashboard/page] Session package saved to database');
-                                } else {
-                                  const errorData = await saveResponse.json().catch(() => ({}));
-                                  console.warn('[dashboard/page] Failed to save session package to database:', errorData);
-                                }
-                              } catch (saveError) {
-                                console.warn('[dashboard/page] Error saving session package to database:', saveError);
-                              }
-                            }
-                          } catch (genError) {
-                            console.error('Failed to generate session package:', genError);
-                          }
-
-                          setSessionPackageData(sessionPkg);
-                        } catch (err) {
-                          console.error('Failed to fetch session package:', err);
-                          setSessionPackageError(err instanceof Error ? err.message : 'Failed to fetch session package');
-                        } finally {
-                          setLoadingSessionPackage(false);
-                        }
-                      }}
-                        sx={{
-                          bgcolor: 'background.paper',
-                          '&:hover': {
-                            bgcolor: 'action.hover',
-                          },
-                        }}
-                      >
-                        <DescriptionIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Give Feedback">
-                      <IconButton 
-                        color="primary" 
-                        onClick={() => openFeedbackDialog()}
-                        sx={{
-                          bgcolor: 'background.paper',
-                          '&:hover': {
-                            bgcolor: 'action.hover',
-                          },
-                        }}
-                      >
-                        <FeedbackIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                </Paper>
-              )}
-              </CardContent>
-            )}
+              <TrustGraphView
+                agentName={resolvedAgentDisplayName || `Agent #${agentIdStr}`}
+                reviewsSummary={{
+                  count: feedbackData.summary?.count ?? feedbackCount ?? 0,
+                  avg:
+                    typeof feedbackData.summary?.averageScore === 'number'
+                      ? feedbackData.summary.averageScore
+                      : null,
+                }}
+                validations={{
+                  completed: validationsData.completed || [],
+                  pending: validationsData.pending || [],
+                }}
+                alliances={agentData ? [agentData.agent_name || agentData.ens_name || 'Alliance Agent'] : []}
+              onOpenReviews={() => setFeedbackModalOpen(true)}
+              onOpenValidations={() => setValidationsModalOpen(true)}
+              resolveEnsName={resolveEnsName}
+              />
+            </CardContent>
+          )}
 
             {/* Account Tab */}
-            {dashboardTab === getTabIndex.account && (
+            {dashboardTab === DASHBOARD_TABS.account && (
               <CardContent sx={{ p: 4 }}>
-                <Typography variant="h5" gutterBottom fontWeight={600} color="text.primary">
-                  Account Information
+              <Typography variant="h5" gutterBottom fontWeight={600} color="text.primary">
+                  Account
                 </Typography>
                 <Divider sx={{ my: 3 }} />
 
@@ -2344,7 +2716,7 @@ export default function DashboardPage() {
           ) : sessionPackageData ? (
             <Box sx={{ pt: 2 }}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3, lineHeight: 1.7 }}>
-                This session package JSON can be used for delegation and other agent operations.
+                This session package JSON can be used for delegation and other agent applications.
               </Typography>
               <Paper
                 variant="outlined"
